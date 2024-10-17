@@ -1,0 +1,14 @@
+{
+  "name": "votera-sdk",
+  "version": "1.0.0",
+  "description": "JS SDK for Votera",
+  "repository": "https://github.com/bosagora/votera-sdk",
+  "author": "BOSagora Foundation",
+  "license": "MIT",
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "packages/*"
+    ]
+  }
+}
