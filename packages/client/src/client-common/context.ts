@@ -1,23 +1,34 @@
 import { ContextParams, ContextState } from "./interfaces/context";
-import { SupportedNetwork, SupportedNetworkArray } from "./interfaces/common";
+import { SupportedNetwork, SupportedNetworksArray } from "./interfaces/common";
 import { InvalidAddressError, UnsupportedProtocolError, UnsupportedNetworkError } from "votera-sdk-common";
 import { getNetwork } from "../utils/Utilty";
-import { LIVE_CONTRACTS } from "./constants";
+
+import { activeContractsList } from "votera-contracts-lib";
 
 import { isAddress } from "@ethersproject/address";
 import { Network } from "@ethersproject/networks";
 import { JsonRpcProvider, Networkish } from "@ethersproject/providers";
 import { AddressZero } from "@ethersproject/constants";
-import { Wallet } from "@ethersproject/wallet";
 export { ContextParams } from "./interfaces/context";
 
+const DEFAULT_GAS_FEE_ESTIMATION_FACTOR = 0.625;
 const supportedProtocols = ["https:", "http:"];
 // if (typeof process !== "undefined" && process.env?.TESTING) {
 //     supportedProtocols.push("http:");
 // }
 
+// State
+const defaultState: ContextState = {
+    network: {
+        name: "mainnet",
+        chainId: 2151
+    },
+    web3Providers: [],
+    gasFeeEstimationFactor: DEFAULT_GAS_FEE_ESTIMATION_FACTOR
+};
+
 export class Context {
-    protected state: ContextState = Object.assign({});
+    protected state: ContextState = Object.assign({}, defaultState);
 
     // INTERNAL CONTEXT STATE
 
@@ -53,7 +64,7 @@ export class Context {
      * @public
      */
     get signer() {
-        return this.state.signer;
+        return this.state.signer || defaultState.signer;
     }
 
     // GETTERS
@@ -61,14 +72,18 @@ export class Context {
     /**
      * Getter for the web3 providers
      *
-     * @var web3Provider
+     * @var web3Providers
      *
      * @returns {JsonRpcProvider[]}
      *
      * @public
      */
-    get web3Provider() {
-        return this.state.web3Provider;
+    get web3Providers() {
+        return this.state.web3Providers || defaultState.web3Providers;
+    }
+
+    get gasFeeEstimationFactor(): number {
+        return this.state.gasFeeEstimationFactor || defaultState.gasFeeEstimationFactor;
     }
 
     get AddressStorage(): string | undefined {
@@ -119,11 +134,41 @@ export class Context {
         return this.state.ExecutionManager;
     }
 
+    // DEFAULT CONTEXT STATE
+    static setDefault(params: Partial<ContextParams>) {
+        if (params.signer) {
+            defaultState.signer = params.signer;
+        }
+    }
+
+    static getDefault() {
+        return defaultState;
+    }
+    //
+    // private static transNetwork(network: Networkish): Networkish {
+    //     if (typeof network === "string") {
+    //         if (network === "bosagora_mainnet") {
+    //             return {
+    //                 name: network,
+    //                 chainId: 2151
+    //             };
+    //         } else if (network === "bosagora_testnet") {
+    //             return {
+    //                 name: network,
+    //                 chainId: 2019
+    //             };
+    //         }
+    //         return network;
+    //     } else {
+    //         return network;
+    //     }
+    // }
+
     // INTERNAL HELPERS
     private static resolveNetwork(networkish: Networkish, ensRegistryAddress?: string): Network {
         const network = getNetwork(networkish);
         const networkName = network.name as SupportedNetwork;
-        if (!SupportedNetworkArray.includes(networkName)) {
+        if (!SupportedNetworksArray.includes(networkName)) {
             throw new UnsupportedNetworkError(networkName);
         }
 
@@ -141,15 +186,29 @@ export class Context {
         return network;
     }
 
-    private static resolveWeb3Provider(endpoint: string | JsonRpcProvider, network: Networkish): JsonRpcProvider {
-        if (typeof endpoint === "string") {
-            const url = new URL(endpoint);
+    private static resolveWeb3Providers(
+        endpoints: string | JsonRpcProvider | (string | JsonRpcProvider)[],
+        network: Networkish
+    ): JsonRpcProvider[] {
+        if (Array.isArray(endpoints)) {
+            return endpoints.map((item) => {
+                if (typeof item === "string") {
+                    const url = new URL(item);
+                    if (!supportedProtocols.includes(url.protocol)) {
+                        throw new UnsupportedProtocolError(url.protocol);
+                    }
+                    return new JsonRpcProvider(url.href, this.resolveNetwork(network));
+                }
+                return item;
+            });
+        } else if (typeof endpoints === "string") {
+            const url = new URL(endpoints);
             if (!supportedProtocols.includes(url.protocol)) {
                 throw new UnsupportedProtocolError(url.protocol);
             }
-            return new JsonRpcProvider(url.href, this.resolveNetwork(network));
+            return [new JsonRpcProvider(url.href, this.resolveNetwork(network))];
         } else {
-            return endpoint;
+            return [endpoints];
         }
     }
 
@@ -163,9 +222,9 @@ export class Context {
     setFull(contextParams: ContextParams): void {
         if (!contextParams.network) {
             throw new Error("Missing network");
-        } else if (!contextParams.privateKey) {
+        } else if (!contextParams.signer) {
             throw new Error("Please pass the required signer");
-        } else if (!contextParams.web3Provider) {
+        } else if (!contextParams.web3Providers) {
             throw new Error("No web3 endpoints defined");
         } else if (!contextParams.AddressStorage) {
             throw new Error("Missing AddressStorage contract address");
@@ -194,9 +253,12 @@ export class Context {
         }
 
         this.state = {
-            network: contextParams.network,
-            signer: new Wallet(contextParams.privateKey),
-            web3Provider: Context.resolveWeb3Provider(contextParams.web3Provider, contextParams.network),
+            network: Context.resolveNetwork(contextParams.network),
+            signer: contextParams.signer,
+            web3Providers: Context.resolveWeb3Providers(
+                contextParams.web3Providers,
+                Context.resolveNetwork(contextParams.network)
+            ),
             AddressStorage: contextParams.AddressStorage,
             BudgetManager: contextParams.BudgetManager,
             ParamStorage: contextParams.ParamStorage,
@@ -208,106 +270,130 @@ export class Context {
             AssessmentController: contextParams.AssessmentController,
             VoteController: contextParams.VoteController,
             ParticipantManager: contextParams.ParticipantManager,
-            ExecutionManager: contextParams.ExecutionManager
+            ExecutionManager: contextParams.ExecutionManager,
+            gasFeeEstimationFactor: Context.resolveGasFeeEstimationFactor(contextParams.gasFeeEstimationFactor)
         };
     }
 
     set(contextParams: Partial<ContextParams>) {
         if (contextParams.network) {
-            this.state.network = contextParams.network;
+            this.state.network = Context.resolveNetwork(contextParams.network);
         }
-        if (contextParams.privateKey) {
-            this.state.signer = new Wallet(contextParams.privateKey);
+        if (contextParams.signer) {
+            this.state.signer = contextParams.signer;
         }
-        if (contextParams.web3Provider) {
-            this.state.web3Provider = Context.resolveWeb3Provider(contextParams.web3Provider, this.state.network);
+        if (contextParams.web3Providers) {
+            this.state.web3Providers = Context.resolveWeb3Providers(
+                contextParams.web3Providers,
+                Context.resolveNetwork(this.state.network)
+            );
         }
         if (contextParams.AddressStorage) {
             this.state.AddressStorage = contextParams.AddressStorage;
+        } else if (this.state.network.toString() in activeContractsList) {
+            this.state.AddressStorage =
+                activeContractsList[this.state.network.toString() as keyof typeof activeContractsList].AddressStorage;
         }
+
         if (contextParams.BudgetManager) {
             this.state.BudgetManager = contextParams.BudgetManager;
+        } else if (this.state.network.toString() in activeContractsList) {
+            this.state.BudgetManager =
+                activeContractsList[this.state.network.toString() as keyof typeof activeContractsList].BudgetManager;
         }
+
         if (contextParams.ParamStorage) {
             this.state.ParamStorage = contextParams.ParamStorage;
+        } else if (this.state.network.toString() in activeContractsList) {
+            this.state.ParamStorage =
+                activeContractsList[this.state.network.toString() as keyof typeof activeContractsList].ParamStorage;
         }
+
         if (contextParams.ParticipantStorage) {
             this.state.ParticipantStorage = contextParams.ParticipantStorage;
+        } else if (this.state.network.toString() in activeContractsList) {
+            this.state.ParticipantStorage =
+                activeContractsList[
+                    this.state.network.toString() as keyof typeof activeContractsList
+                ].ParticipantStorage;
         }
+
         if (contextParams.ProposalStorage) {
             this.state.ProposalStorage = contextParams.ProposalStorage;
+        } else if (this.state.network.toString() in activeContractsList) {
+            this.state.ProposalStorage =
+                activeContractsList[this.state.network.toString() as keyof typeof activeContractsList].ProposalStorage;
         }
+
         if (contextParams.AssessmentStorage) {
             this.state.AssessmentStorage = contextParams.AssessmentStorage;
+        } else if (this.state.network.toString() in activeContractsList) {
+            this.state.AssessmentStorage =
+                activeContractsList[
+                    this.state.network.toString() as keyof typeof activeContractsList
+                ].AssessmentStorage;
         }
+
         if (contextParams.VoteStorage) {
             this.state.VoteStorage = contextParams.VoteStorage;
+        } else if (this.state.network.toString() in activeContractsList) {
+            this.state.VoteStorage =
+                activeContractsList[this.state.network.toString() as keyof typeof activeContractsList].VoteStorage;
         }
+
         if (contextParams.ReceptionController) {
             this.state.ReceptionController = contextParams.ReceptionController;
+        } else if (this.state.network.toString() in activeContractsList) {
+            this.state.ReceptionController =
+                activeContractsList[
+                    this.state.network.toString() as keyof typeof activeContractsList
+                ].ReceptionController;
         }
+
         if (contextParams.AssessmentController) {
             this.state.AssessmentController = contextParams.AssessmentController;
+        } else if (this.state.network.toString() in activeContractsList) {
+            this.state.AssessmentController =
+                activeContractsList[
+                    this.state.network.toString() as keyof typeof activeContractsList
+                ].AssessmentController;
         }
+
         if (contextParams.VoteController) {
             this.state.VoteController = contextParams.VoteController;
+        } else if (this.state.network.toString() in activeContractsList) {
+            this.state.VoteController =
+                activeContractsList[this.state.network.toString() as keyof typeof activeContractsList].VoteController;
         }
+
         if (contextParams.ParticipantManager) {
             this.state.ParticipantManager = contextParams.ParticipantManager;
+        } else if (this.state.network.toString() in activeContractsList) {
+            this.state.ParticipantManager =
+                activeContractsList[
+                    this.state.network.toString() as keyof typeof activeContractsList
+                ].ParticipantManager;
         }
+
         if (contextParams.ExecutionManager) {
             this.state.ExecutionManager = contextParams.ExecutionManager;
+        } else if (this.state.network.toString() in activeContractsList) {
+            this.state.ExecutionManager =
+                activeContractsList[this.state.network.toString() as keyof typeof activeContractsList].ExecutionManager;
+        }
+
+        if (contextParams.gasFeeEstimationFactor) {
+            this.state.gasFeeEstimationFactor = Context.resolveGasFeeEstimationFactor(
+                contextParams.gasFeeEstimationFactor
+            );
         }
     }
-}
 
-export class ContextBuilder {
-    public static buildContextParams(networkName: SupportedNetwork, defaultPrivateKey: string): ContextParams {
-        return {
-            network: LIVE_CONTRACTS[networkName].network,
-            privateKey: defaultPrivateKey,
-            AddressStorage: LIVE_CONTRACTS[networkName].AddressStorage,
-            BudgetManager: LIVE_CONTRACTS[networkName].BudgetManager,
-            ParamStorage: LIVE_CONTRACTS[networkName].ParamStorage,
-            ParticipantStorage: LIVE_CONTRACTS[networkName].ParticipantStorage,
-            ProposalStorage: LIVE_CONTRACTS[networkName].ProposalStorage,
-            AssessmentStorage: LIVE_CONTRACTS[networkName].AssessmentStorage,
-            VoteStorage: LIVE_CONTRACTS[networkName].VoteStorage,
-            ReceptionController: LIVE_CONTRACTS[networkName].ReceptionController,
-            AssessmentController: LIVE_CONTRACTS[networkName].AssessmentController,
-            VoteController: LIVE_CONTRACTS[networkName].VoteController,
-            ParticipantManager: LIVE_CONTRACTS[networkName].ParticipantManager,
-            ExecutionManager: LIVE_CONTRACTS[networkName].ExecutionManager,
-            web3Provider: LIVE_CONTRACTS[networkName].web3Endpoint
-        };
-    }
-
-    public static buildContextParamsOfMainnet(defaultPrivateKey: string): ContextParams {
-        return ContextBuilder.buildContextParams(SupportedNetwork.MAINNET, defaultPrivateKey);
-    }
-
-    public static buildContextParamsOfTestnet(defaultPrivateKey: string): ContextParams {
-        return ContextBuilder.buildContextParams(SupportedNetwork.TESTNET, defaultPrivateKey);
-    }
-
-    public static buildContextParamsOfDevnet(defaultPrivateKey: string): ContextParams {
-        return ContextBuilder.buildContextParams(SupportedNetwork.DEVNET, defaultPrivateKey);
-    }
-
-    public static buildContext(networkName: SupportedNetwork, defaultPrivateKey: string): Context {
-        const contextParams = ContextBuilder.buildContextParams(networkName, defaultPrivateKey);
-        return new Context(contextParams);
-    }
-
-    public static buildContextOfMainnet(defaultPrivateKey: string): Context {
-        return ContextBuilder.buildContext(SupportedNetwork.MAINNET, defaultPrivateKey);
-    }
-
-    public static buildContextOfTestnet(defaultPrivateKey: string): Context {
-        return ContextBuilder.buildContext(SupportedNetwork.TESTNET, defaultPrivateKey);
-    }
-
-    public static buildContextOfDevnet(defaultPrivateKey: string): Context {
-        return ContextBuilder.buildContext(SupportedNetwork.DEVNET, defaultPrivateKey);
+    private static resolveGasFeeEstimationFactor(gasFeeEstimationFactor?: number): number {
+        if (typeof gasFeeEstimationFactor === "undefined") return 1;
+        else if (gasFeeEstimationFactor < 0 || gasFeeEstimationFactor > 1) {
+            throw new Error("Gas estimation factor value should be a number between 0 and 1");
+        }
+        return gasFeeEstimationFactor;
     }
 }

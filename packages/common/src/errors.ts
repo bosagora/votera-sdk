@@ -46,80 +46,26 @@ export class NoSignerError extends Error {
     }
 }
 
-export class UnexpectedActionError extends Error {
-    constructor() {
-        super("The received action is different from the expected one");
-    }
-}
-
-export class NoTokenAddress extends Error {
-    constructor() {
-        super("A token address is needed");
-    }
-}
-
 export class ProposalCreationError extends Error {
     constructor() {
         super("Failed to create proposal");
     }
 }
 
-export class MissingExecPermissionError extends Error {
+export class PostBallotError extends Error {
     constructor() {
-        super("No plugin requests EXECUTE_PERMISSION");
+        super("Failed to post ballot");
     }
 }
 
-export class UpdateAllowanceError extends Error {
+export class PostCommentError extends Error {
     constructor() {
-        super("Could not define a minimum allowance");
-    }
-}
-
-export class InvalidPrecisionError extends Error {
-    constructor() {
-        super("Invalid precision, number must be an integer greater than 0");
-    }
-}
-
-export class FailedDepositError extends Error {
-    constructor() {
-        super("Failed to deposit");
-    }
-}
-
-export class AmountMismatchError extends Error {
-    constructor(expected: bigint, received: bigint) {
-        super(`Deposited amount mismatch. Expected: ${expected}, received: ${received}`);
+        super("Failed to post comment");
     }
 }
 
 export class UnsupportedNetworkError extends Error {
     constructor(network: string) {
         super("Unsupported network: " + network);
-    }
-}
-
-export class ClientNotInitializedError extends Error {
-    constructor(client: string) {
-        super(client + " client is not initialized");
-    }
-}
-
-export class NoNodesAvailableError extends Error {
-    constructor(name: string) {
-        super("No " + name + " nodes available");
-    }
-}
-
-export class PluginInstallationPreparationError extends Error {
-    constructor() {
-        super("Failed to install plugin");
-    }
-}
-
-export class DataDecodingError extends Error {
-    constructor(message: string) {
-        super("Cannot decode data: " + message);
     }
 }

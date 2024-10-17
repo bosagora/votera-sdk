@@ -1,11 +1,11 @@
 export enum SupportedNetwork {
-    MAINNET = "mainnet",
-    TESTNET = "testnet",
-    DEVNET = "devnet",
+    MAINNET = "bosagora_mainnet",
+    TESTNET = "bosagora_testnet",
+    DEVNET = "bosagora_devnet",
     LOCAL = "localhost"
 }
 
-export const SupportedNetworkArray = Object.values(SupportedNetwork);
+export const SupportedNetworksArray = Object.values(SupportedNetwork);
 
 export type NetworkDeployment = {
     AddressStorage: string;
@@ -20,7 +20,10 @@ export type NetworkDeployment = {
     VoteController: string;
     ParticipantManager: string;
     ExecutionManager: string;
-    network: number;
-    web3Endpoint: string;
 };
 export type GenericRecord = Record<string, string | number | boolean | null | undefined>;
+
+export type GasFeeEstimation = {
+    average: bigint;
+    max: bigint;
+};

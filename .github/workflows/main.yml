@@ -32,6 +32,6 @@ jobs:
         run: cp packages/client/env/.env.sample packages/client/env/.env
       - name: Build of Client
         run: cd packages/client && yarn run build
-#      - name: Run Tests of Client
-#        run: cd packages/client && yarn run test
+      - name: Run Tests of Client
+        run: cd packages/client && yarn run test
 

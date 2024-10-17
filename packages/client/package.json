@@ -28,8 +28,7 @@
     "prepare": "tsdx build",
     "size": "size-limit",
     "analyze": "size-limit --why",
-    "clean": "rm -Rf .turbo dist",
-    "examples": "node ./scripts/generate-examples-md.js ./examples ./examples.md"
+    "clean": "rm -Rf .turbo dist"
   },
   "husky": {
     "hooks": {
@@ -49,6 +48,7 @@
   "devDependencies": {
     "@size-limit/preset-small-lib": "^7.0.8",
     "dotenv": "^16.3.1",
+    "ganache": "^7.9.2",
     "glob": "^8.0.3",
     "husky": "^7.0.4",
     "size-limit": "^7.0.8",
@@ -69,7 +69,7 @@
     "@ethersproject/providers": "^5.7.0",
     "@ethersproject/random": "^5.7.0",
     "@ethersproject/wallet": "^5.7.0",
-    "votera-contracts-lib": "~1.0.0",
+    "votera-contracts-lib": "~1.0.6",
     "votera-sdk-common": "~1.0.0",
     "unfetch": "~4.2.0"
   },

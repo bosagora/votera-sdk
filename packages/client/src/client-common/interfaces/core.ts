@@ -1,17 +1,20 @@
 import { Signer } from "@ethersproject/abstract-signer";
 import { Contract, ContractInterface } from "@ethersproject/contracts";
 import { JsonRpcProvider } from "@ethersproject/providers";
+import { GasFeeEstimation } from "./common";
 
 export interface IClientWeb3Core {
-    usePrivateKey: (privateKey: string) => void;
     useSigner: (signer: Signer) => void;
+    shiftProvider: () => void;
     getSigner: () => Signer | undefined;
     getConnectedSigner: () => Signer;
     getProvider: () => JsonRpcProvider | undefined;
+    getMaxFeePerGas: () => Promise<bigint>;
     isUp: () => Promise<boolean>;
+    ensureOnline: () => Promise<void>;
     attachContract: <T>(address: string, abi: ContractInterface) => Contract & T;
+    getApproximateGasFee: (estimatedFee: bigint) => Promise<GasFeeEstimation>;
 
-    getChainId: () => number;
     getAddressStorageAddress: () => string;
     getBudgetManagerAddress: () => string;
     getParamStorageAddress: () => string;

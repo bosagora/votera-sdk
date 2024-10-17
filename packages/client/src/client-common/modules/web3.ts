@@ -1,7 +1,9 @@
 import { Wallet } from "@ethersproject/wallet";
-import { JsonRpcProvider, Networkish } from "@ethersproject/providers";
+import { JsonRpcProvider } from "@ethersproject/providers";
 import { Contract, ContractInterface } from "@ethersproject/contracts";
 import { Signer } from "@ethersproject/abstract-signer";
+
+import { GasFeeEstimation } from "../../client-common/interfaces/common";
 import { IClientWeb3Core } from "../interfaces/core";
 import { Context } from "../context";
 import {
@@ -16,14 +18,12 @@ import {
     NoReceptionControllerAddress,
     NoVoteControllerAddress,
     NoParticipantManagerAddress,
-    NoAssessmentControllerAddress,
-    NoNetwork
+    NoAssessmentControllerAddress
 } from "../../utils/errors";
 
-import { UnsupportedNetworkError } from "votera-sdk-common";
-
-const networkMap = new Map<Web3Module, Networkish>();
-const providersMap = new Map<Web3Module, JsonRpcProvider>();
+const gasFeeEstimationFactorMap = new Map<Web3Module, number>();
+const providersMap = new Map<Web3Module, JsonRpcProvider[]>();
+const providerIdxMap = new Map<Web3Module, number>();
 const signerMap = new Map<Web3Module, Signer>();
 
 const AddressStorageAddressMap = new Map<Web3Module, string>();
@@ -40,18 +40,22 @@ const ParticipantManagerAddressMap = new Map<Web3Module, string>();
 const ExecutionManagerAddressMap = new Map<Web3Module, string>();
 
 export class Web3Module implements IClientWeb3Core {
-    constructor(context: Context) {
-        // Storing client data in the private module's scope to prevent external mutation
-        if (context.network) {
-            networkMap.set(this, context.network);
-        }
+    private static readonly PRECISION_FACTOR_BASE = 1000;
 
-        if (context.web3Provider) {
-            providersMap.set(this, context.web3Provider);
+    constructor(context: Context) {
+        providerIdxMap.set(this, -1);
+        // Storing client data in the private module's scope to prevent external mutation
+        if (context.web3Providers) {
+            providersMap.set(this, context.web3Providers);
+            providerIdxMap.set(this, 0);
         }
 
         if (context.signer) {
             this.useSigner(context.signer);
+        }
+
+        if (context.gasFeeEstimationFactor) {
+            gasFeeEstimationFactorMap.set(this, context.gasFeeEstimationFactor);
         }
 
         if (context.AddressStorage) {
@@ -106,10 +110,6 @@ export class Web3Module implements IClientWeb3Core {
         Object.freeze(this);
     }
 
-    private get network(): Networkish | undefined {
-        return networkMap.get(this);
-    }
-
     private get AddressStorage(): string {
         return AddressStorageAddressMap.get(this) || "";
     }
@@ -158,18 +158,20 @@ export class Web3Module implements IClientWeb3Core {
         return ExecutionManagerAddressMap.get(this) || "";
     }
 
-    private get provider(): JsonRpcProvider | undefined {
-        return providersMap.get(this);
+    private get gasFeeEstimationFactor(): number {
+        return gasFeeEstimationFactorMap.get(this) || 1;
+    }
+
+    private get providers(): JsonRpcProvider[] {
+        return providersMap.get(this) || [];
+    }
+
+    private get providerIdx(): number {
+        return providerIdxMap.get(this)!;
     }
 
     private get signer(): Signer | undefined {
         return signerMap.get(this);
-    }
-
-    public usePrivateKey(privateKey: string): void {
-        const provider = this.getProvider();
-        const signer = provider !== undefined ? new Wallet(privateKey, provider) : new Wallet(privateKey);
-        signerMap.set(this, signer);
     }
 
     /** Replaces the current signer by the given one */
@@ -178,6 +180,16 @@ export class Web3Module implements IClientWeb3Core {
             throw new Error("Empty wallet or signer");
         }
         signerMap.set(this, signer);
+    }
+
+    /** Starts using the next available Web3 provider */
+    public shiftProvider(): void {
+        if (!this.providers.length) {
+            throw new Error("No endpoints");
+        } else if (this.providers.length <= 1) {
+            throw new Error("No other endpoints");
+        }
+        providerIdxMap.set(this, (this.providerIdx + 1) % this.providers.length);
     }
 
     /** Retrieves the current signer */
@@ -205,18 +217,36 @@ export class Web3Module implements IClientWeb3Core {
 
     /** Returns the currently active network provider */
     public getProvider(): JsonRpcProvider | undefined {
-        return this.provider;
+        return this.providers[this.providerIdx] || null;
     }
 
     /** Returns whether the current provider is functional or not */
     public isUp(): Promise<boolean> {
-        const provider = this.getProvider();
-        if (!provider) return Promise.reject(new Error("No provider"));
+        return new Promise<boolean>((resolve, reject) => {
+            const provider = this.getProvider();
+            if (!provider) return reject(new Error("No provider"));
+            provider
+                .getNetwork()
+                .then(() => {
+                    resolve(true);
+                })
+                .catch(() => {
+                    resolve(false);
+                });
+        });
+    }
 
-        return provider
-            .getNetwork()
-            .then(() => true)
-            .catch(() => false);
+    public async ensureOnline(): Promise<void> {
+        if (!this.providers.length) {
+            return Promise.reject(new Error("No provider"));
+        }
+
+        for (let i = 0; i < this.providers.length; i++) {
+            if (await this.isUp()) return;
+
+            this.shiftProvider();
+        }
+        throw new Error("No providers available");
     }
 
     /**
@@ -249,23 +279,29 @@ export class Web3Module implements IClientWeb3Core {
         return contract.connect(signer) as Contract & T;
     }
 
-    public getNetwork(): Networkish {
-        if (!this.network) {
-            throw new NoNetwork();
-        }
-        return this.network;
+    /** Calculates the expected maximum gas fee */
+    public getMaxFeePerGas(): Promise<bigint> {
+        return new Promise<bigint>((resolve, reject) => {
+            this.getConnectedSigner()
+                .getFeeData()
+                .then((feeData) => {
+                    if (!feeData.maxFeePerGas) {
+                        return reject(new Error("Cannot estimate gas"));
+                    }
+                    return resolve(feeData.maxFeePerGas.toBigInt());
+                });
+        });
     }
 
-    public getChainId(): number {
-        const network = this.getNetwork();
-        if (typeof network == "string") {
-            throw new UnsupportedNetworkError(network);
-        } else if (typeof network == "number") {
-            return network;
-        } else {
-            if (network.chainId !== undefined) return network.chainId;
-            else throw new UnsupportedNetworkError("");
-        }
+    public getApproximateGasFee(estimatedFee: bigint): Promise<GasFeeEstimation> {
+        return new Promise<GasFeeEstimation>((resolve) => {
+            this.getMaxFeePerGas().then((maxFeePerGas) => {
+                const max = estimatedFee * maxFeePerGas;
+                const factor = this.gasFeeEstimationFactor * Web3Module.PRECISION_FACTOR_BASE;
+                const average = (max * BigInt(Math.trunc(factor))) / BigInt(Web3Module.PRECISION_FACTOR_BASE);
+                return resolve({ average, max });
+            });
+        });
     }
 
     public getAddressStorageAddress(): string {

@@ -1,13 +1,15 @@
 // This file defines the interfaces of the context object holding client settings
 
 import { Signer } from "@ethersproject/abstract-signer";
-import { JsonRpcProvider, Networkish } from "@ethersproject/providers";
+import { JsonRpcProvider, Network, Networkish } from "@ethersproject/providers";
 
 // Context input parameters
 type Web3ContextParams = {
-    network: number;
-    privateKey: string;
-    web3Provider: string;
+    network: Networkish;
+    signer?: Signer;
+    web3Providers?: string | JsonRpcProvider | (string | JsonRpcProvider)[];
+    gasFeeEstimationFactor?: number;
+
     AddressStorage: string;
     BudgetManager: string;
     ParamStorage: string;
@@ -26,9 +28,10 @@ export type ContextParams = Web3ContextParams;
 
 // Context state data
 type Web3ContextState = {
-    network: Networkish;
+    network: Network;
     signer?: Signer;
-    web3Provider: JsonRpcProvider;
+    web3Providers: JsonRpcProvider[];
+    gasFeeEstimationFactor: number;
 
     AddressStorage?: string;
     BudgetManager?: string;

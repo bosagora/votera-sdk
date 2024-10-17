@@ -1,39 +1,29 @@
 import { ClientCore, Context } from "./client-common";
-import { VoteMethods } from "./internal/client/VoteMethods";
-import { AssessmentMethods } from "./internal/client/AssessmentMethods";
-import { ReceptionMethods } from "./internal/client/ReceptionMethods";
-import { IVote, IVoteMethods } from "./interface/IVote";
-import { IAssessment, IAssessmentMethods } from "./interface/IAssessment";
-import { IReception, IReceptionMethods } from "./interface/IReception";
+import { ClientMethods } from "./internal/client/ClientMethods";
+import { IClient, IClientMethods } from "./interface/IClientMethods";
 
-export class Client extends ClientCore implements IVote, IAssessment, IReception {
-    private readonly privateAssessment: IAssessmentMethods;
-    private readonly privateReception: IReceptionMethods;
-    private readonly privateVote: IVoteMethods;
+import { Signer } from "@ethersproject/abstract-signer";
+
+export class Client extends ClientCore implements IClient {
+    private readonly privateMethods: ClientMethods;
 
     constructor(context: Context) {
         super(context);
-        this.privateAssessment = new AssessmentMethods(context);
-        this.privateReception = new ReceptionMethods(context);
-        this.privateVote = new VoteMethods(context);
+        this.privateMethods = new ClientMethods(context);
         Object.freeze(Client.prototype);
         Object.freeze(this);
     }
 
-    public usePrivateKey(privateKey: string): void {
-        this.web3.usePrivateKey(privateKey);
-        this.privateVote.web3.usePrivateKey(privateKey);
+    /** Replaces the current signer by the given one */
+    public useSigner(signer: Signer): void {
+        if (!signer) {
+            throw new Error("Empty wallet or signer");
+        }
+        this.web3.useSigner(signer);
+        this.privateMethods.web3.useSigner(signer);
     }
 
-    public get vote(): IVoteMethods {
-        return this.privateVote;
-    }
-
-    public get assessment(): IAssessmentMethods {
-        return this.privateAssessment;
-    }
-
-    public get reception(): IReceptionMethods {
-        return this.privateReception;
+    public get methods(): IClientMethods {
+        return this.privateMethods;
     }
 }

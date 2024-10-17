@@ -3,7 +3,7 @@ import { activeContractsList } from "votera-contracts-lib";
 import { Network } from "@ethersproject/networks";
 
 export const LIVE_CONTRACTS: { [K in SupportedNetwork]: NetworkDeployment } = {
-    mainnet: {
+    [SupportedNetwork.MAINNET]: {
         AddressStorage: activeContractsList.mainnet.AddressStorage,
         BudgetManager: activeContractsList.mainnet.BudgetManager,
         ParamStorage: activeContractsList.mainnet.ParamStorage,
@@ -15,11 +15,9 @@ export const LIVE_CONTRACTS: { [K in SupportedNetwork]: NetworkDeployment } = {
         AssessmentController: activeContractsList.mainnet.AssessmentController,
         VoteController: activeContractsList.mainnet.VoteController,
         ParticipantManager: activeContractsList.mainnet.ParticipantManager,
-        ExecutionManager: activeContractsList.mainnet.ExecutionManager,
-        network: 2151,
-        web3Endpoint: "https://mainnet.bosagora.org/"
+        ExecutionManager: activeContractsList.mainnet.ExecutionManager
     },
-    testnet: {
+    [SupportedNetwork.TESTNET]: {
         AddressStorage: activeContractsList.testnet.AddressStorage,
         BudgetManager: activeContractsList.testnet.BudgetManager,
         ParamStorage: activeContractsList.testnet.ParamStorage,
@@ -31,11 +29,9 @@ export const LIVE_CONTRACTS: { [K in SupportedNetwork]: NetworkDeployment } = {
         AssessmentController: activeContractsList.testnet.AssessmentController,
         VoteController: activeContractsList.testnet.VoteController,
         ParticipantManager: activeContractsList.testnet.ParticipantManager,
-        ExecutionManager: activeContractsList.testnet.ExecutionManager,
-        network: 2019,
-        web3Endpoint: "https://testnet.bosagora.org/"
+        ExecutionManager: activeContractsList.testnet.ExecutionManager
     },
-    devnet: {
+    [SupportedNetwork.DEVNET]: {
         AddressStorage: activeContractsList.devnet.AddressStorage,
         BudgetManager: activeContractsList.devnet.BudgetManager,
         ParamStorage: activeContractsList.devnet.ParamStorage,
@@ -47,11 +43,9 @@ export const LIVE_CONTRACTS: { [K in SupportedNetwork]: NetworkDeployment } = {
         AssessmentController: activeContractsList.devnet.AssessmentController,
         VoteController: activeContractsList.devnet.VoteController,
         ParticipantManager: activeContractsList.devnet.ParticipantManager,
-        ExecutionManager: activeContractsList.devnet.ExecutionManager,
-        network: 24680,
-        web3Endpoint: "http://devnet.bosagora.org/"
+        ExecutionManager: activeContractsList.devnet.ExecutionManager
     },
-    localhost: {
+    [SupportedNetwork.LOCAL]: {
         AddressStorage: activeContractsList.devnet.AddressStorage,
         BudgetManager: activeContractsList.devnet.BudgetManager,
         ParamStorage: activeContractsList.devnet.ParamStorage,
@@ -63,9 +57,7 @@ export const LIVE_CONTRACTS: { [K in SupportedNetwork]: NetworkDeployment } = {
         AssessmentController: activeContractsList.devnet.AssessmentController,
         VoteController: activeContractsList.devnet.VoteController,
         ParticipantManager: activeContractsList.devnet.ParticipantManager,
-        ExecutionManager: activeContractsList.devnet.ExecutionManager,
-        network: 24680,
-        web3Endpoint: "http://localhost:8545/"
+        ExecutionManager: activeContractsList.devnet.ExecutionManager
     }
 };
 
