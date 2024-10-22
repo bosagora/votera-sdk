@@ -5,6 +5,7 @@ import {
     AssessmentPostCommentStepValue,
     Candidate,
     CreateProposalStepValue,
+    ExecutionStepValue,
     IScoreData,
     ICommentData,
     IProposalData,
@@ -20,7 +21,7 @@ import {
     VoteResult,
     IParamValue
 } from "../interfaces";
-import { BigNumberish } from "@ethersproject/bignumber";
+import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 
 export interface IClient {
     methods: IClientMethods;
@@ -55,7 +56,15 @@ export interface IClientMethods extends IClientCore {
     getVoteResult: (proposalId: BytesLike) => Promise<VoteResult>;
     getAssessmentResult: (proposalId: BytesLike) => Promise<VoteResult>;
     getExecutionStates: (proposalId: BytesLike) => Promise<VoteResult>;
-    //---
+    getWithdrawalAmount: (proposalId: BytesLike) => Promise<BigNumber>;
+
+    // ---
+
+    canBeWithdrawn: (proposalId: BytesLike) => Promise<boolean>;
+    canBeExecute: (proposalId: BytesLike) => Promise<boolean>;
+    execute: (proposalId: BytesLike) => AsyncGenerator<ExecutionStepValue>;
+
+    // ---
 
     getAssessmentSummary: (proposalId: BytesLike) => Promise<[number, number, number, number, number]>;
     postScore: (

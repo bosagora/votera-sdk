@@ -124,6 +124,17 @@ export enum NormalSteps {
     DONE = "done"
 }
 
+export type ExecutionStepValue =
+    | {
+          key: NormalSteps.PREPARED;
+          proposalId: BytesLike;
+      }
+    | { key: NormalSteps.SENT; proposalId: BytesLike; txHash: BytesLike }
+    | {
+          key: NormalSteps.DONE;
+          proposalId: BytesLike;
+      };
+
 export type CreateProposalStepValue =
     | {
           key: NormalSteps.PREPARED;

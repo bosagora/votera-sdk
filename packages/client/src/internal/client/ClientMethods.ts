@@ -8,6 +8,8 @@ import {
     AssessmentController__factory,
     AssessmentStorage,
     AssessmentStorage__factory,
+    ExecutionManager,
+    ExecutionManager__factory,
     ParamStorage,
     ParamStorage__factory,
     ProposalStorage,
@@ -21,6 +23,7 @@ import {
 } from "votera-contracts-lib";
 
 import {
+    ExecutionError,
     NoProviderError,
     NoSignerError,
     PostBallotError,
@@ -35,6 +38,7 @@ import {
     AssessmentPostScoreStepValue,
     Candidate,
     CreateProposalStepValue,
+    ExecutionStepValue,
     ICommentData,
     IParamValue,
     IProposalData,
@@ -318,6 +322,17 @@ export class ClientMethods extends ClientCore implements IClientMethods {
             throw new EVMException(message.code, message.error.message);
         }
     }
+
+    public async getWithdrawalAmount(proposalId: BytesLike): Promise<BigNumber> {
+        try {
+            const res = await this.getReceptionController().getProposal(proposalId);
+            return res.fundAmount;
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
+    }
+
     //--
 
     private getAssessmentStorage(): AssessmentStorage {
@@ -628,16 +643,78 @@ export class ClientMethods extends ClientCore implements IClientMethods {
 
     // --
 
-    private getParamStorage(): ParamStorage {
-        try {
-            const provider = this.web3.getProvider() as Provider;
-            if (!provider) throw new NoProviderError();
+    private getExecutionController(): ExecutionManager {
+        const provider = this.web3.getProvider() as Provider;
+        if (!provider) throw new NoProviderError();
 
-            return ParamStorage__factory.connect(this.web3.getParamStorageAddress(), provider);
+        return ExecutionManager__factory.connect(this.web3.getExecutionManagerAddress(), provider);
+    }
+
+    private getExecutionControllerWithSigner(): ExecutionManager {
+        const signer = this.web3.getConnectedSigner();
+        if (!signer) throw new NoSignerError();
+
+        return ExecutionManager__factory.connect(this.web3.getExecutionManagerAddress(), signer);
+    }
+
+    public async canBeWithdrawn(proposalId: BytesLike): Promise<boolean> {
+        try {
+            return await this.getExecutionController().canBeWithdrawn(proposalId);
         } catch (error) {
             const message = ResponseMessage.getEVMErrorMessage(error);
             throw new EVMException(message.code, message.error.message);
         }
+    }
+
+    public async canBeExecute(proposalId: BytesLike): Promise<boolean> {
+        try {
+            return await this.getExecutionController().canBeExecute(proposalId);
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
+    }
+
+    public async *execute(proposalId: BytesLike): AsyncGenerator<ExecutionStepValue> {
+        yield {
+            key: NormalSteps.PREPARED,
+            proposalId
+        };
+
+        let tx: ContractTransaction;
+        let cr: ContractReceipt;
+        try {
+            tx = await this.getExecutionControllerWithSigner().execute(proposalId);
+            yield {
+                key: NormalSteps.SENT,
+                proposalId,
+                txHash: tx.hash
+            };
+
+            cr = await tx.wait();
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
+
+        const log = ContractUtils.findLog(cr, this.getProposalStorage().interface, "UpdatedExecutionStates");
+        if (!log) {
+            throw new ExecutionError();
+        }
+
+        yield {
+            key: NormalSteps.DONE,
+            proposalId
+        };
+    }
+
+    // --
+
+    private getParamStorage(): ParamStorage {
+        const provider = this.web3.getProvider() as Provider;
+        if (!provider) throw new NoProviderError();
+
+        return ParamStorage__factory.connect(this.web3.getParamStorageAddress(), provider);
     }
 
     public async getFundProposalFee(): Promise<IParamValue> {
