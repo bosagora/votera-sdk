@@ -7,6 +7,7 @@ import {
     Client,
     Context,
     ContractUtils,
+    ExecutionStates,
     NormalSteps,
     ProposalPeriod,
     ProposalStates,
@@ -229,6 +230,7 @@ describe("Test for Transition", () => {
             }
         }
         expect(await client.methods.getPeriod(proposalData.proposalId)).toEqual(ProposalPeriod.VOTE);
+        expect(await client.methods.canBeWithdrawn(proposalData.proposalId)).toEqual(false);
     });
 
     it("Increase time to end of vote + 10", async () => {
@@ -257,5 +259,42 @@ describe("Test for Transition", () => {
         expect(await client.methods.getStates(proposalData.proposalId)).toEqual(ProposalStates.OPENED);
         expect(await client.methods.getPeriod(proposalData.proposalId)).toEqual(ProposalPeriod.EXECUTION);
         expect(await client.methods.getVoteResult(proposalData.proposalId)).toEqual(VoteResult.APPROVED);
+        expect(await client.methods.getExecutionStates(proposalData.proposalId)).toEqual(ExecutionStates.NONE);
+    });
+
+    it("execution", async () => {
+        client.useSigner(deployments.accounts.users[0]);
+        expect(await client.methods.canBeWithdrawn(proposalData.proposalId)).toEqual(true);
+        const balance1 = await deployments.provider.getBalance(deployments.accounts.users[0].address);
+        for await (const step of client.methods.execute(proposalData.proposalId)) {
+            switch (step.key) {
+                case NormalSteps.PREPARED:
+                    expect(step.proposalId).toEqual(proposalData.proposalId);
+                    break;
+                case NormalSteps.SENT:
+                    expect(step.proposalId).toEqual(proposalData.proposalId);
+                    expect(step.txHash).toMatch(/^0x[A-Fa-f0-9]{64}$/i);
+                    break;
+                case NormalSteps.DONE:
+                    expect(step.proposalId).toEqual(proposalData.proposalId);
+                    break;
+                default:
+                    throw new Error("Unexpected step: " + JSON.stringify(step, null, 2));
+            }
+        }
+        const balance2 = await deployments.provider.getBalance(deployments.accounts.users[0].address);
+        expect(
+            balance1
+                .add(proposalData.fundAmount)
+                .sub(balance2)
+                .toNumber()
+        ).toBeLessThan(1e18);
+        expect(await client.methods.canBeWithdrawn(proposalData.proposalId)).toEqual(false);
+    });
+
+    it("getStates", async () => {
+        expect(await client.methods.getStates(proposalData.proposalId)).toEqual(ProposalStates.CLOSED);
+        expect(await client.methods.getPeriod(proposalData.proposalId)).toEqual(ProposalPeriod.FINISHED);
+        expect(await client.methods.getExecutionStates(proposalData.proposalId)).toEqual(ExecutionStates.FINISHED);
     });
 });
