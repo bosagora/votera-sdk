@@ -31,14 +31,14 @@ import {
 import { ClientCore, Context } from "../../client-common";
 import { IClientMethods } from "../../interface/IClientMethods";
 import {
-    AssessmentPostScoreStepValue,
     AssessmentPostCommentStepValue,
+    AssessmentPostScoreStepValue,
     Candidate,
     CreateProposalStepValue,
-    IScoreData,
     ICommentData,
     IParamValue,
     IProposalData,
+    IScoreData,
     ISystemProposalParam,
     IVoteBallotData,
     NormalSteps,
@@ -52,6 +52,8 @@ import {
     VoteResult
 } from "../../interfaces";
 import { ContractUtils } from "../../utils/ContractUtils";
+import { ResponseMessage } from "../../utils/ResponseMessage";
+import { EVMException } from "../../utils/errors";
 
 export class ClientMethods extends ClientCore implements IClientMethods {
     constructor(context: Context) {
@@ -148,11 +150,8 @@ export class ClientMethods extends ClientCore implements IClientMethods {
             };
             cr = await tx.wait();
         } catch (error) {
-            yield {
-                key: NormalSteps.FAIL,
-                proposalId
-            };
-            return;
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
         }
 
         const storage = this.getProposalStorage();
@@ -198,18 +197,33 @@ export class ClientMethods extends ClientCore implements IClientMethods {
     }
 
     public async getProposal(proposalId: BytesLike): Promise<IProposalData> {
-        const res = await this.getReceptionController().getProposal(proposalId);
-        return this.toIProposalData(res);
+        try {
+            const res = await this.getReceptionController().getProposal(proposalId);
+            return this.toIProposalData(res);
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 
     public async getProposalByIndex(idx: number, sortType: SortType): Promise<IProposalData> {
-        const res = await this.getReceptionController().getProposalByIndex(idx, sortType);
-        return this.toIProposalData(res);
+        try {
+            const res = await this.getReceptionController().getProposalByIndex(idx, sortType);
+            return this.toIProposalData(res);
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 
     public async getProposalList(startIndex: number, endIndex: number, sortType: SortType): Promise<IProposalData[]> {
-        const res = await this.getReceptionController().getProposalList(startIndex, endIndex, sortType);
-        return res.map((m) => this.toIProposalData(m));
+        try {
+            const res = await this.getReceptionController().getProposalList(startIndex, endIndex, sortType);
+            return res.map((m) => this.toIProposalData(m));
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 
     public async *transition(proposalId: BytesLike): AsyncGenerator<TransitionStepValue> {
@@ -230,11 +244,8 @@ export class ClientMethods extends ClientCore implements IClientMethods {
 
             await tx.wait();
         } catch (error) {
-            yield {
-                key: NormalSteps.FAIL,
-                proposalId
-            };
-            return;
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
         }
         yield {
             key: NormalSteps.DONE,
@@ -243,34 +254,69 @@ export class ClientMethods extends ClientCore implements IClientMethods {
     }
 
     public async getProposalLength(): Promise<number> {
-        return (await this.getReceptionController().getLength()).toNumber();
+        try {
+            return (await this.getReceptionController().getLength()).toNumber();
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 
     public async getStates(proposalId: BytesLike): Promise<ProposalStates> {
-        return await this.getReceptionController().getStates(proposalId);
+        try {
+            return await this.getReceptionController().getStates(proposalId);
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 
     public async getPeriod(proposalId: BytesLike): Promise<ProposalPeriod> {
-        return await this.getReceptionController().getPeriod(proposalId);
+        try {
+            return await this.getReceptionController().getPeriod(proposalId);
+        } catch (error) {
+            const message = ContractUtils.cacheEVMError(error);
+            throw new Error(message);
+        }
     }
 
     public async getPeriodToTransition(proposalId: BytesLike): Promise<ProposalPeriod> {
-        return await this.getReceptionController().getPeriodToTransition(proposalId);
+        try {
+            return await this.getReceptionController().getPeriodToTransition(proposalId);
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 
     public async getVoteResult(proposalId: BytesLike): Promise<VoteResult> {
-        const res = await this.getReceptionController().getProposal(proposalId);
-        return res.voteResult;
+        try {
+            const res = await this.getReceptionController().getProposal(proposalId);
+            return res.voteResult;
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 
     public async getAssessmentResult(proposalId: BytesLike): Promise<VoteResult> {
-        const res = await this.getReceptionController().getProposal(proposalId);
-        return res.assessmentResult;
+        try {
+            const res = await this.getReceptionController().getProposal(proposalId);
+            return res.assessmentResult;
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 
     public async getExecutionStates(proposalId: BytesLike): Promise<VoteResult> {
-        const res = await this.getReceptionController().getProposal(proposalId);
-        return res.executionStates;
+        try {
+            const res = await this.getReceptionController().getProposal(proposalId);
+            return res.executionStates;
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
     //--
 
@@ -321,11 +367,8 @@ export class ClientMethods extends ClientCore implements IClientMethods {
 
             cr = await tx.wait();
         } catch (error) {
-            yield {
-                key: NormalSteps.FAIL,
-                proposalId
-            };
-            return;
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
         }
         const log = ContractUtils.findLog(cr, this.getAssessmentStorage().interface, "PostScore");
         if (!log) {
@@ -360,8 +403,13 @@ export class ClientMethods extends ClientCore implements IClientMethods {
     }
 
     public async getScore(proposalId: BytesLike, voter: string): Promise<IScoreData> {
-        const res = await this.getAssessmentController().getScore(proposalId, voter);
-        return this.toIAssessmentBallotData(res);
+        try {
+            const res = await this.getAssessmentController().getScore(proposalId, voter);
+            return this.toIAssessmentBallotData(res);
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 
     public async getScoreList(
@@ -370,12 +418,22 @@ export class ClientMethods extends ClientCore implements IClientMethods {
         endIndex: number,
         sortType: SortType
     ): Promise<IScoreData[]> {
-        const res = await this.getAssessmentController().getScoreList(proposalId, startIndex, endIndex, sortType);
-        return res.map((m) => this.toIAssessmentBallotData(m));
+        try {
+            const res = await this.getAssessmentController().getScoreList(proposalId, startIndex, endIndex, sortType);
+            return res.map((m) => this.toIAssessmentBallotData(m));
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 
     public async getScoreLength(proposalId: BytesLike): Promise<number> {
-        return (await this.getAssessmentController().getScoreLength(proposalId)).toNumber();
+        try {
+            return (await this.getAssessmentController().getScoreLength(proposalId)).toNumber();
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 
     public async *postComment(proposalId: BytesLike, message: string): AsyncGenerator<AssessmentPostCommentStepValue> {
@@ -396,11 +454,8 @@ export class ClientMethods extends ClientCore implements IClientMethods {
 
             cr = await tx.wait();
         } catch (error) {
-            yield {
-                key: NormalSteps.FAIL,
-                proposalId
-            };
-            return;
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
         }
         const log = ContractUtils.findLog(cr, this.getAssessmentStorage().interface, "PostComment");
         if (!log) {
@@ -418,12 +473,22 @@ export class ClientMethods extends ClientCore implements IClientMethods {
         endIndex: number,
         sortType: SortType
     ): Promise<ICommentData[]> {
-        const res = await this.getAssessmentController().getCommentList(proposalId, startIndex, endIndex, sortType);
-        return res.map((m) => this.toICommentDataOfAssessment(m));
+        try {
+            const res = await this.getAssessmentController().getCommentList(proposalId, startIndex, endIndex, sortType);
+            return res.map((m) => this.toICommentDataOfAssessment(m));
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 
     public async getCommentLength(proposalId: BytesLike): Promise<number> {
-        return (await this.getAssessmentController().getCommentLength(proposalId)).toNumber();
+        try {
+            return (await this.getAssessmentController().getCommentLength(proposalId)).toNumber();
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 
     private getVoteStorage(): VoteStorage {
@@ -448,8 +513,13 @@ export class ClientMethods extends ClientCore implements IClientMethods {
     }
 
     public async getVoteSummary(proposalId: BytesLike): Promise<[number, number, number]> {
-        const res = await this.getVoteController().getVoteSummary(proposalId);
-        return [res[0].toNumber(), res[1].toNumber(), res[2].toNumber()];
+        try {
+            const res = await this.getVoteController().getVoteSummary(proposalId);
+            return [res[0].toNumber(), res[1].toNumber(), res[2].toNumber()];
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 
     public async *postBallot(proposalId: BytesLike, choice: Candidate): AsyncGenerator<VotePostBallotStepValue> {
@@ -470,11 +540,8 @@ export class ClientMethods extends ClientCore implements IClientMethods {
 
             cr = await tx.wait();
         } catch (error) {
-            yield {
-                key: NormalSteps.FAIL,
-                proposalId
-            };
-            return;
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
         }
         const log = ContractUtils.findLog(cr, this.getVoteStorage().interface, "PostBallot");
         if (!log) {
@@ -495,8 +562,13 @@ export class ClientMethods extends ClientCore implements IClientMethods {
     }
 
     public async getBallot(proposalId: BytesLike, voter: string): Promise<IVoteBallotData> {
-        const res = await this.getVoteController().getBallot(proposalId, voter);
-        return this.toIVoteBallotData(res);
+        try {
+            const res = await this.getVoteController().getBallot(proposalId, voter);
+            return this.toIVoteBallotData(res);
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 
     public async getBallotList(
@@ -505,8 +577,13 @@ export class ClientMethods extends ClientCore implements IClientMethods {
         endIndex: number,
         sortType: SortType
     ): Promise<IVoteBallotData[]> {
-        const res = await this.getVoteController().getBallotList(proposalId, startIndex, endIndex, sortType);
-        return res.map((m) => this.toIVoteBallotData(m));
+        try {
+            const res = await this.getVoteController().getBallotList(proposalId, startIndex, endIndex, sortType);
+            return res.map((m) => this.toIVoteBallotData(m));
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 
     public async getBallotLength(proposalId: BytesLike): Promise<number> {
@@ -523,78 +600,133 @@ export class ClientMethods extends ClientCore implements IClientMethods {
         endIndex: number,
         sortType: SortType
     ): Promise<string[]> {
-        return await this.getVoteController().getVoterList(proposalId, startIndex, endIndex, sortType);
+        try {
+            return await this.getVoteController().getVoterList(proposalId, startIndex, endIndex, sortType);
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 
     public async getVoterLength(proposalId: BytesLike): Promise<number> {
-        return (await this.getVoteController().getVoterLength(proposalId)).toNumber();
+        try {
+            return (await this.getVoteController().getVoterLength(proposalId)).toNumber();
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 
     public async isVoter(proposalId: BytesLike, item: string): Promise<boolean> {
-        return await this.getVoteController().isVoter(proposalId, item);
+        try {
+            return await this.getVoteController().isVoter(proposalId, item);
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 
     // --
 
     private getParamStorage(): ParamStorage {
-        const provider = this.web3.getProvider() as Provider;
-        if (!provider) throw new NoProviderError();
+        try {
+            const provider = this.web3.getProvider() as Provider;
+            if (!provider) throw new NoProviderError();
 
-        return ParamStorage__factory.connect(this.web3.getParamStorageAddress(), provider);
+            return ParamStorage__factory.connect(this.web3.getParamStorageAddress(), provider);
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 
     public async getFundProposalFee(): Promise<IParamValue> {
-        const res = await this.getParamStorage().getFundProposalFee();
-        return {
-            value: res.value,
-            multiple: res.multiple
-        };
+        try {
+            const res = await this.getParamStorage().getFundProposalFee();
+            return {
+                value: res.value,
+                multiple: res.multiple
+            };
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 
     public async getSystemProposalFee(): Promise<IParamValue> {
-        const res = await this.getParamStorage().getSystemProposalFee();
-        return {
-            value: res.value,
-            multiple: res.multiple
-        };
+        try {
+            const res = await this.getParamStorage().getSystemProposalFee();
+            return {
+                value: res.value,
+                multiple: res.multiple
+            };
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
     public async getVoteQuorumFactor(): Promise<IParamValue> {
-        const res = await this.getParamStorage().getVoteQuorumFactor();
-        return {
-            value: res.value,
-            multiple: res.multiple
-        };
+        try {
+            const res = await this.getParamStorage().getVoteQuorumFactor();
+            return {
+                value: res.value,
+                multiple: res.multiple
+            };
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 
     public async getApprovalDiffPercent(): Promise<IParamValue> {
-        const res = await this.getParamStorage().getApprovalDiffPercent();
-        return {
-            value: res.value,
-            multiple: res.multiple
-        };
+        try {
+            const res = await this.getParamStorage().getApprovalDiffPercent();
+            return {
+                value: res.value,
+                multiple: res.multiple
+            };
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 
     public async getVoteCost(): Promise<IParamValue> {
-        const res = await this.getParamStorage().getVoteCost();
-        return {
-            value: res.value,
-            multiple: res.multiple
-        };
+        try {
+            const res = await this.getParamStorage().getVoteCost();
+            return {
+                value: res.value,
+                multiple: res.multiple
+            };
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 
     public async getAssessmentAverage(): Promise<IParamValue> {
-        const res = await this.getParamStorage().getAssessmentAverage();
-        return {
-            value: res.value,
-            multiple: res.multiple
-        };
+        try {
+            const res = await this.getParamStorage().getAssessmentAverage();
+            return {
+                value: res.value,
+                multiple: res.multiple
+            };
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 
     public async getAssessmentIndividual(): Promise<IParamValue> {
-        const res = await this.getParamStorage().getAssessmentIndividual();
-        return {
-            value: res.value,
-            multiple: res.multiple
-        };
+        try {
+            const res = await this.getParamStorage().getAssessmentIndividual();
+            return {
+                value: res.value,
+                multiple: res.multiple
+            };
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 }

@@ -85,6 +85,8 @@ export class ContractUtils {
     private static find1_length = ContractUtils.find1_message.length;
     private static find2_message = "reverted with reason string";
     private static find2_length = ContractUtils.find2_message.length;
+    private static find3_message = "VM Exception while processing transaction: revert";
+    private static find3_length = ContractUtils.find3_message.length;
     public static cacheEVMError(root: any): string {
         const reasons: string[] = [];
         let error = root;
@@ -105,6 +107,14 @@ export class ContractUtils {
                         .replace(/[/']/gi, "");
                     reasons.push(message);
                 }
+                idx = reason.indexOf(ContractUtils.find3_message);
+                if (idx >= 0) {
+                    message = reason
+                        .substring(idx + ContractUtils.find3_length)
+                        .trim()
+                        .replace(/[/']/gi, "");
+                    reasons.push(message);
+                }
             } else if (error.message) {
                 const reason = String(error.message);
                 let idx = reason.indexOf(ContractUtils.find1_message);
@@ -117,6 +127,14 @@ export class ContractUtils {
                 if (idx >= 0) {
                     message = reason
                         .substring(idx + ContractUtils.find2_length)
+                        .trim()
+                        .replace(/[/']/gi, "");
+                    reasons.push(message);
+                }
+                idx = reason.indexOf(ContractUtils.find3_message);
+                if (idx >= 0) {
+                    message = reason
+                        .substring(idx + ContractUtils.find3_length)
                         .trim()
                         .replace(/[/']/gi, "");
                     reasons.push(message);
