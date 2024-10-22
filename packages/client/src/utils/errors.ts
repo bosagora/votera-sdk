@@ -36,26 +36,6 @@ export class ClientError extends Error {
     }
 }
 
-export class InvalidResponseError extends ClientError {
-    constructor(res: UnfetchResponse) {
-        super(res);
-        this.message = "Invalid response";
-    }
-}
-
-export class BodyParseError extends ClientError {
-    constructor(res: UnfetchResponse) {
-        super(res);
-        this.message = "Error parsing body";
-    }
-}
-
-export class NoNetwork extends Error {
-    constructor() {
-        super("A network is needed");
-    }
-}
-
 export class NoAssessmentStorageAddress extends Error {
     constructor() {
         super("AssessmentStorage address is needed");
@@ -134,8 +114,10 @@ export class InternalServerError extends Error {
     }
 }
 
-export class FailedTransactionError extends Error {
-    constructor() {
-        super("Failed to process transaction");
+export class EVMException extends Error {
+    public code: number;
+    constructor(code: number, message: string) {
+        super(message);
+        this.code = code;
     }
 }

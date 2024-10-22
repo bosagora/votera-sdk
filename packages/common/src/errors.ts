@@ -52,6 +52,12 @@ export class ProposalCreationError extends Error {
     }
 }
 
+export class ProposalNotFoundError extends Error {
+    constructor() {
+        super("Not found proposal");
+    }
+}
+
 export class PostBallotError extends Error {
     constructor() {
         super("Failed to post ballot");

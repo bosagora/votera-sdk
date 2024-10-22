@@ -121,8 +121,7 @@ export interface IVoteBallotData {
 export enum NormalSteps {
     PREPARED = "prepare",
     SENT = "sent",
-    DONE = "done",
-    FAIL = "fail"
+    DONE = "done"
 }
 
 export type CreateProposalStepValue =
@@ -133,10 +132,6 @@ export type CreateProposalStepValue =
     | { key: NormalSteps.SENT; proposalId: BytesLike; txHash: BytesLike }
     | {
           key: NormalSteps.DONE;
-          proposalId: BytesLike;
-      }
-    | {
-          key: NormalSteps.FAIL;
           proposalId: BytesLike;
       };
 
@@ -149,10 +144,6 @@ export type AssessmentPostScoreStepValue =
     | {
           key: NormalSteps.DONE;
           proposalId: BytesLike;
-      }
-    | {
-          key: NormalSteps.FAIL;
-          proposalId: BytesLike;
       };
 
 export type AssessmentPostCommentStepValue =
@@ -163,10 +154,6 @@ export type AssessmentPostCommentStepValue =
     | { key: NormalSteps.SENT; proposalId: BytesLike; txHash: BytesLike }
     | {
           key: NormalSteps.DONE;
-          proposalId: BytesLike;
-      }
-    | {
-          key: NormalSteps.FAIL;
           proposalId: BytesLike;
       };
 
@@ -179,10 +166,6 @@ export type VotePostBallotStepValue =
     | {
           key: NormalSteps.DONE;
           proposalId: BytesLike;
-      }
-    | {
-          key: NormalSteps.FAIL;
-          proposalId: BytesLike;
       };
 export type TransitionStepValue =
     | {
@@ -192,9 +175,5 @@ export type TransitionStepValue =
     | { key: NormalSteps.SENT; proposalId: BytesLike; txHash: BytesLike }
     | {
           key: NormalSteps.DONE;
-          proposalId: BytesLike;
-      }
-    | {
-          key: NormalSteps.FAIL;
           proposalId: BytesLike;
       };
