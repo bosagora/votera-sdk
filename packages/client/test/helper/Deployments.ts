@@ -43,11 +43,17 @@ interface IDeployedContract {
     contract: BaseContract;
 }
 
+interface IParticipantData {
+    voter: string;
+    validatorKey: string;
+}
+
 export interface IAccount {
     deployer: Wallet;
     owner: Wallet;
     users: Wallet[];
     voters: Wallet[];
+    validators: IParticipantData[];
 }
 
 type FnDeployer = (accounts: IAccount, deployments: Deployments) => Promise<any>;
@@ -63,14 +69,15 @@ export class Deployments {
 
         let raws = GanacheServer.accounts();
         const [deployer, owner, user01, user02, user03, user04, user05, user06, user07, user08, user09, user10] = raws;
-        const voters: any = JSON.parse(fs.readFileSync("./test/data/votes.json", "utf8")).map(
-            (m: { privateKey: string }) => m.privateKey
-        );
+        const voters: any = JSON.parse(fs.readFileSync("./test/data/votes.json", "utf8"));
         this.accounts = {
             deployer,
             owner,
             users: [user01, user02, user03, user04, user05, user06, user07, user08, user09, user10],
-            voters: voters.map((m: string) => new Wallet(m, this.provider))
+            voters: voters.map((m: any) => new Wallet(m.privateKey, this.provider)),
+            validators: voters.map((m: any) => {
+                return { voter: m.address, validatorKey: m.validatorKey };
+            }),
         };
     }
 

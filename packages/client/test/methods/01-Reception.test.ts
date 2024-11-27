@@ -98,7 +98,7 @@ describe("Test for Reception - Business proposal", () => {
     it("addParticipant", async () => {
         await participantManager
             .connect(deployments.accounts.owner)
-            .addParticipants(deployments.accounts.voters.map((m) => m.address));
+            .addParticipants(deployments.accounts.validators.map((m) => m));
     });
 
     it("createProposal", async () => {
@@ -306,7 +306,16 @@ describe("Test for Reception - System proposal", () => {
     it("addParticipant", async () => {
         await participantManager
             .connect(deployments.accounts.owner)
-            .addParticipants(deployments.accounts.voters.map((m) => m.address));
+            .addParticipants(deployments.accounts.validators.map((m) => m));
+
+        for (const elem of deployments.accounts.validators) {
+            expect(await client.methods.getVoterOf(elem.validatorKey)).toEqual(
+                elem.voter
+            );
+            expect(await client.methods.getValidatorKeyOf(elem.voter)).toEqual(
+                elem.validatorKey
+            );
+        }
     });
 
     it("createProposal", async () => {

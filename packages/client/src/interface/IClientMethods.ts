@@ -117,4 +117,9 @@ export interface IClientMethods extends IClientCore {
     getVoteCost: () => Promise<IParamValue>;
     getAssessmentAverage: () => Promise<IParamValue>;
     getAssessmentIndividual: () => Promise<IParamValue>;
+
+    //--
+
+    getVoterOf: (validatorKey: BytesLike) => Promise<string>;
+    getValidatorKeyOf: (voter: string) => Promise<string>;
 }

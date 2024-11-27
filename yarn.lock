@@ -7517,10 +7517,10 @@ verror@1.10.0:
     core-util-is "1.0.2"
     extsprintf "^1.2.0"
 
-votera-contracts-lib@~1.0.6:
-  version "1.0.6"
-  resolved "https://registry.yarnpkg.com/votera-contracts-lib/-/votera-contracts-lib-1.0.6.tgz#13f176a25cd40eca08f0d642404cb36835c5b7f7"
-  integrity sha512-/Sl105L1w/xXY/pB8u1QQAv2301drvXIdvPzAxynXZTQG75cX536yfHHGBWU/cJ0IEwECfHSKOmNV0FQGiZHSg==
+votera-contracts-lib@~1.0.8:
+  version "1.0.8"
+  resolved "https://registry.yarnpkg.com/votera-contracts-lib/-/votera-contracts-lib-1.0.8.tgz#a0c0e640b20f9ffc4a21a69ed0025813e9fb7458"
+  integrity sha512-+qdZCgBeujQsrbYvNiF5QS2XTUcdcRSTQvGGE2/N4el20M7ghVWMJJadRtv/R4FcOHLDHyBrROt4PFVTapCqDQ==
   dependencies:
     ethers "^5.7.0"
 

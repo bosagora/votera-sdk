@@ -11,7 +11,7 @@ import {
     ExecutionManager,
     ExecutionManager__factory,
     ParamStorage,
-    ParamStorage__factory,
+    ParamStorage__factory, ParticipantStorage,
     ProposalStorage,
     ProposalStorage__factory,
     ReceptionController,
@@ -19,7 +19,8 @@ import {
     VoteController,
     VoteController__factory,
     VoteStorage,
-    VoteStorage__factory
+    VoteStorage__factory,
+    ParticipantStorage__factory
 } from "votera-contracts-lib";
 
 import {
@@ -77,6 +78,13 @@ export class ClientMethods extends ClientCore implements IClientMethods {
         if (!provider) throw new NoProviderError();
 
         return ProposalStorage__factory.connect(this.web3.getProposalStorageAddress(), provider);
+    }
+
+    private getParticipantStorage(): ParticipantStorage {
+        const provider = this.web3.getProvider() as Provider;
+        if (!provider) throw new NoProviderError();
+
+        return ParticipantStorage__factory.connect(this.web3.getParticipantStorageAddress(), provider);
     }
 
     private getReceptionController(): ReceptionController {
@@ -801,6 +809,24 @@ export class ClientMethods extends ClientCore implements IClientMethods {
                 value: res.value,
                 multiple: res.multiple
             };
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
+    }
+
+    public async getVoterOf(validatorKey: BytesLike): Promise<string> {
+        try {
+            return await this.getParticipantStorage().voterOf(validatorKey);
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
+    }
+
+    public async getValidatorKeyOf(voter: string): Promise<string> {
+        try {
+            return await this.getParticipantStorage().validatorKeyOf(voter);
         } catch (error) {
             const message = ResponseMessage.getEVMErrorMessage(error);
             throw new EVMException(message.code, message.error.message);

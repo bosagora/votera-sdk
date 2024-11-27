@@ -69,7 +69,7 @@ describe("Test for Transition", () => {
     it("addParticipant", async () => {
         await participantManager
             .connect(deployments.accounts.owner)
-            .addParticipants(deployments.accounts.voters.map((m) => m.address));
+            .addParticipants(deployments.accounts.validators.map((m) => m));
     });
 
     it("createProposal", async () => {
