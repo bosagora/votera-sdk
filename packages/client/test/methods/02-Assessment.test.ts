@@ -42,7 +42,7 @@ describe("Test for Assessment", () => {
         deployments = new Deployments();
         await deployments.doDeployAll();
         participantManager = deployments.getContract("ParticipantManager") as ParticipantManager;
-        proposalData.proposer = deployments.accounts.users[0].address;
+        proposalData.proposer = deployments.accounts.voters[0].address;
     });
 
     afterAll(async () => {
@@ -53,7 +53,7 @@ describe("Test for Assessment", () => {
     beforeAll(async () => {
         const ctx = new Context(deployments.getContextParams());
         client = new Client(ctx);
-        client.useSigner(deployments.accounts.users[0]);
+        client.useSigner(deployments.accounts.voters[0]);
     });
 
     it("Web3 Health Checking", async () => {
@@ -66,13 +66,16 @@ describe("Test for Assessment", () => {
     });
 
     it("addParticipant", async () => {
-        await participantManager
-            .connect(deployments.accounts.owner)
-            .addParticipants(deployments.accounts.validators.map((m) => m));
+        const size = 24;
+        for (let idx = 0; idx < deployments.accounts.validators.length; idx += size) {
+            await participantManager
+                .connect(deployments.accounts.deployer)
+                .addParticipants(deployments.accounts.validators.slice(idx, idx + size));
+        }
     });
 
     it("createProposal", async () => {
-        client.useSigner(deployments.accounts.users[0]);
+        client.useSigner(deployments.accounts.voters[0]);
         for await (const step of client.methods.createProposal(
             proposalData.proposalType,
             proposalData.title,

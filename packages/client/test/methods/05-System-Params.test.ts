@@ -43,7 +43,7 @@ describe("Test for System Params", () => {
     beforeAll(async () => {
         const ctx = new Context(deployments.getContextParams());
         client = new Client(ctx);
-        client.useSigner(deployments.accounts.users[0]);
+        client.useSigner(deployments.accounts.voters[0]);
     });
 
     describe("VoteCost", () => {
@@ -72,9 +72,12 @@ describe("Test for System Params", () => {
         });
 
         it("addParticipant", async () => {
-            await participantManager
-                .connect(deployments.accounts.owner)
-                .addParticipants(deployments.accounts.validators.map((m) => m));
+            const size = 24;
+            for (let idx = 0; idx < deployments.accounts.validators.length; idx += size) {
+                await participantManager
+                    .connect(deployments.accounts.deployer)
+                    .addParticipants(deployments.accounts.validators.slice(idx, idx + size));
+            }
         });
 
         it("createProposal", async () => {
@@ -178,7 +181,7 @@ describe("Test for System Params", () => {
         });
 
         it("transition", async () => {
-            client.useSigner(deployments.accounts.users[0]);
+            client.useSigner(deployments.accounts.voters[0]);
             for await (const step of client.methods.transition(proposalData.proposalId)) {
                 switch (step.key) {
                     case NormalSteps.PREPARED:
@@ -242,9 +245,12 @@ describe("Test for System Params", () => {
         });
 
         it("addParticipant", async () => {
-            await participantManager
-                .connect(deployments.accounts.owner)
-                .addParticipants(deployments.accounts.validators.map((m) => m));
+            const size = 24;
+            for (let idx = 0; idx < deployments.accounts.validators.length; idx += size) {
+                await participantManager
+                    .connect(deployments.accounts.deployer)
+                    .addParticipants(deployments.accounts.validators.slice(idx, idx + size));
+            }
         });
 
         it("createProposal", async () => {
@@ -348,7 +354,7 @@ describe("Test for System Params", () => {
         });
 
         it("transition", async () => {
-            client.useSigner(deployments.accounts.users[0]);
+            client.useSigner(deployments.accounts.voters[0]);
             for await (const step of client.methods.transition(proposalData.proposalId)) {
                 switch (step.key) {
                     case NormalSteps.PREPARED:
@@ -415,9 +421,12 @@ describe("Test for System Params", () => {
         });
 
         it("addParticipant", async () => {
-            await participantManager
-                .connect(deployments.accounts.owner)
-                .addParticipants(deployments.accounts.validators.map((m) => m));
+            const size = 24;
+            for (let idx = 0; idx < deployments.accounts.validators.length; idx += size) {
+                await participantManager
+                    .connect(deployments.accounts.deployer)
+                    .addParticipants(deployments.accounts.validators.slice(idx, idx + size));
+            }
         });
 
         it("createProposal", async () => {
@@ -521,7 +530,7 @@ describe("Test for System Params", () => {
         });
 
         it("transition", async () => {
-            client.useSigner(deployments.accounts.users[0]);
+            client.useSigner(deployments.accounts.voters[0]);
             for await (const step of client.methods.transition(proposalData.proposalId)) {
                 switch (step.key) {
                     case NormalSteps.PREPARED:
@@ -588,9 +597,12 @@ describe("Test for System Params", () => {
         });
 
         it("addParticipant", async () => {
-            await participantManager
-                .connect(deployments.accounts.owner)
-                .addParticipants(deployments.accounts.validators.map((m) => m));
+            const size = 24;
+            for (let idx = 0; idx < deployments.accounts.validators.length; idx += size) {
+                await participantManager
+                    .connect(deployments.accounts.deployer)
+                    .addParticipants(deployments.accounts.validators.slice(idx, idx + size));
+            }
         });
 
         it("createProposal", async () => {
@@ -694,7 +706,7 @@ describe("Test for System Params", () => {
         });
 
         it("transition", async () => {
-            client.useSigner(deployments.accounts.users[0]);
+            client.useSigner(deployments.accounts.voters[0]);
             for await (const step of client.methods.transition(proposalData.proposalId)) {
                 switch (step.key) {
                     case NormalSteps.PREPARED:

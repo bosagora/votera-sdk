@@ -47,7 +47,7 @@ describe("Test for Transition", () => {
         deployments = new Deployments();
         await deployments.doDeployAll();
         participantManager = deployments.getContract("ParticipantManager") as ParticipantManager;
-        proposalData.proposer = deployments.accounts.users[0].address;
+        proposalData.proposer = deployments.accounts.voters[0].address;
     });
 
     afterAll(async () => {
@@ -58,7 +58,7 @@ describe("Test for Transition", () => {
     beforeAll(async () => {
         const ctx = new Context(deployments.getContextParams());
         client = new Client(ctx);
-        client.useSigner(deployments.accounts.users[0]);
+        client.useSigner(deployments.accounts.voters[0]);
     });
 
     it("Web3 Health Checking", async () => {
@@ -67,9 +67,12 @@ describe("Test for Transition", () => {
     });
 
     it("addParticipant", async () => {
-        await participantManager
-            .connect(deployments.accounts.owner)
-            .addParticipants(deployments.accounts.validators.map((m) => m));
+        const size = 24;
+        for (let idx = 0; idx < deployments.accounts.validators.length; idx += size) {
+            await participantManager
+                .connect(deployments.accounts.deployer)
+                .addParticipants(deployments.accounts.validators.slice(idx, idx + size));
+        }
     });
 
     it("createProposal", async () => {
@@ -148,7 +151,7 @@ describe("Test for Transition", () => {
     });
 
     it("transition", async () => {
-        client.useSigner(deployments.accounts.users[0]);
+        client.useSigner(deployments.accounts.voters[0]);
         for await (const step of client.methods.transition(proposalData.proposalId)) {
             switch (step.key) {
                 case NormalSteps.PREPARED:
@@ -238,7 +241,7 @@ describe("Test for Transition", () => {
     });
 
     it("transition", async () => {
-        client.useSigner(deployments.accounts.users[0]);
+        client.useSigner(deployments.accounts.voters[0]);
         for await (const step of client.methods.transition(proposalData.proposalId)) {
             switch (step.key) {
                 case NormalSteps.PREPARED:
@@ -263,9 +266,9 @@ describe("Test for Transition", () => {
     });
 
     it("execution", async () => {
-        client.useSigner(deployments.accounts.users[0]);
+        client.useSigner(deployments.accounts.voters[0]);
         expect(await client.methods.canBeWithdrawn(proposalData.proposalId)).toEqual(true);
-        const balance1 = await deployments.provider.getBalance(deployments.accounts.users[0].address);
+        const balance1 = await deployments.provider.getBalance(deployments.accounts.voters[0].address);
         for await (const step of client.methods.execute(proposalData.proposalId)) {
             switch (step.key) {
                 case NormalSteps.PREPARED:
@@ -282,7 +285,7 @@ describe("Test for Transition", () => {
                     throw new Error("Unexpected step: " + JSON.stringify(step, null, 2));
             }
         }
-        const balance2 = await deployments.provider.getBalance(deployments.accounts.users[0].address);
+        const balance2 = await deployments.provider.getBalance(deployments.accounts.voters[0].address);
         expect(
             balance1
                 .add(proposalData.fundAmount)

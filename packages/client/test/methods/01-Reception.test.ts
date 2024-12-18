@@ -70,9 +70,9 @@ describe("Test for Reception - Business proposal", () => {
         deployments = new Deployments();
         await deployments.doDeployAll();
         participantManager = deployments.getContract("ParticipantManager") as ParticipantManager;
-        proposalData[0].proposer = deployments.accounts.users[0].address;
-        proposalData[1].proposer = deployments.accounts.users[1].address;
-        proposalData[2].proposer = deployments.accounts.users[2].address;
+        proposalData[0].proposer = deployments.accounts.voters[0].address;
+        proposalData[1].proposer = deployments.accounts.voters[1].address;
+        proposalData[2].proposer = deployments.accounts.voters[2].address;
     });
 
     afterAll(async () => {
@@ -83,7 +83,7 @@ describe("Test for Reception - Business proposal", () => {
     beforeAll(async () => {
         const ctx = new Context(deployments.getContextParams());
         client = new Client(ctx);
-        client.useSigner(deployments.accounts.users[0]);
+        client.useSigner(deployments.accounts.voters[0]);
     });
 
     it("Web3 Health Checking", async () => {
@@ -96,13 +96,16 @@ describe("Test for Reception - Business proposal", () => {
     });
 
     it("addParticipant", async () => {
-        await participantManager
-            .connect(deployments.accounts.owner)
-            .addParticipants(deployments.accounts.validators.map((m) => m));
+        const size = 24;
+        for (let idx = 0; idx < deployments.accounts.validators.length; idx += size) {
+            await participantManager
+                .connect(deployments.accounts.deployer)
+                .addParticipants(deployments.accounts.validators.slice(idx, idx + size));
+        }
     });
 
     it("createProposal", async () => {
-        client.useSigner(deployments.accounts.users[0]);
+        client.useSigner(deployments.accounts.voters[0]);
         for await (const step of client.methods.createProposal(
             proposalData[0].proposalType,
             proposalData[0].title,
@@ -164,7 +167,7 @@ describe("Test for Reception - Business proposal", () => {
 
     it("createProposal others", async () => {
         for (let idx = 1; idx < 3; idx++) {
-            client.useSigner(deployments.accounts.users[idx]);
+            client.useSigner(deployments.accounts.voters[idx]);
             for await (const step of client.methods.createProposal(
                 proposalData[idx].proposalType,
                 proposalData[idx].title,
@@ -278,9 +281,9 @@ describe("Test for Reception - System proposal", () => {
         deployments = new Deployments();
         await deployments.doDeployAll();
         participantManager = deployments.getContract("ParticipantManager") as ParticipantManager;
-        proposalData[0].proposer = deployments.accounts.users[0].address;
-        proposalData[1].proposer = deployments.accounts.users[1].address;
-        proposalData[2].proposer = deployments.accounts.users[2].address;
+        proposalData[0].proposer = deployments.accounts.voters[0].address;
+        proposalData[1].proposer = deployments.accounts.voters[1].address;
+        proposalData[2].proposer = deployments.accounts.voters[2].address;
     });
 
     afterAll(async () => {
@@ -291,7 +294,7 @@ describe("Test for Reception - System proposal", () => {
     beforeAll(async () => {
         const ctx = new Context(deployments.getContextParams());
         client = new Client(ctx);
-        client.useSigner(deployments.accounts.users[0]);
+        client.useSigner(deployments.accounts.voters[0]);
     });
 
     it("Web3 Health Checking", async () => {
@@ -304,9 +307,12 @@ describe("Test for Reception - System proposal", () => {
     });
 
     it("addParticipant", async () => {
-        await participantManager
-            .connect(deployments.accounts.owner)
-            .addParticipants(deployments.accounts.validators.map((m) => m));
+        const size = 24;
+        for (let idx = 0; idx < deployments.accounts.validators.length; idx += size) {
+            await participantManager
+                .connect(deployments.accounts.deployer)
+                .addParticipants(deployments.accounts.validators.slice(idx, idx + size));
+        }
 
         for (const elem of deployments.accounts.validators) {
             expect(await client.methods.getVoterOf(elem.validatorKey)).toEqual(
@@ -319,7 +325,7 @@ describe("Test for Reception - System proposal", () => {
     });
 
     it("createProposal", async () => {
-        client.useSigner(deployments.accounts.users[0]);
+        client.useSigner(deployments.accounts.voters[0]);
         for await (const step of client.methods.createProposal(
             proposalData[0].proposalType,
             proposalData[0].title,
@@ -381,7 +387,7 @@ describe("Test for Reception - System proposal", () => {
 
     it("createProposal others", async () => {
         for (let idx = 1; idx < 3; idx++) {
-            client.useSigner(deployments.accounts.users[idx]);
+            client.useSigner(deployments.accounts.voters[idx]);
             for await (const step of client.methods.createProposal(
                 proposalData[idx].proposalType,
                 proposalData[idx].title,
