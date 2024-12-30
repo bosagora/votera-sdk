@@ -30,6 +30,7 @@ export enum VoteResult {
 
 export enum ExecutionStates {
     NONE,
+    IN_PROCESS,
     FINISHED
 }
 

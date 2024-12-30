@@ -72,7 +72,7 @@ describe("Test for System Params", () => {
         });
 
         it("addParticipant", async () => {
-            const size = 24;
+            const size = 12;
             for (let idx = 0; idx < deployments.accounts.validators.length; idx += size) {
                 await participantManager
                     .connect(deployments.accounts.deployer)
@@ -244,15 +244,6 @@ describe("Test for System Params", () => {
             expect(isUp).toEqual(true);
         });
 
-        it("addParticipant", async () => {
-            const size = 24;
-            for (let idx = 0; idx < deployments.accounts.validators.length; idx += size) {
-                await participantManager
-                    .connect(deployments.accounts.deployer)
-                    .addParticipants(deployments.accounts.validators.slice(idx, idx + size));
-            }
-        });
-
         it("createProposal", async () => {
             for await (const step of client.methods.createProposal(
                 proposalData.proposalType,
@@ -420,15 +411,6 @@ describe("Test for System Params", () => {
             expect(isUp).toEqual(true);
         });
 
-        it("addParticipant", async () => {
-            const size = 24;
-            for (let idx = 0; idx < deployments.accounts.validators.length; idx += size) {
-                await participantManager
-                    .connect(deployments.accounts.deployer)
-                    .addParticipants(deployments.accounts.validators.slice(idx, idx + size));
-            }
-        });
-
         it("createProposal", async () => {
             for await (const step of client.methods.createProposal(
                 proposalData.proposalType,
@@ -594,15 +576,6 @@ describe("Test for System Params", () => {
         it("Web3 Health Checking", async () => {
             const isUp = await client.methods.web3.isUp();
             expect(isUp).toEqual(true);
-        });
-
-        it("addParticipant", async () => {
-            const size = 24;
-            for (let idx = 0; idx < deployments.accounts.validators.length; idx += size) {
-                await participantManager
-                    .connect(deployments.accounts.deployer)
-                    .addParticipants(deployments.accounts.validators.slice(idx, idx + size));
-            }
         });
 
         it("createProposal", async () => {

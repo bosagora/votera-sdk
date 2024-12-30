@@ -77,7 +77,7 @@ export class Deployments {
             voters: voters.map((m: any) => new Wallet(m.privateKey, this.provider)),
             validators: voters.map((m: any) => {
                 return { voter: m.address, validatorKey: m.validatorKey };
-            }),
+            })
         };
     }
 

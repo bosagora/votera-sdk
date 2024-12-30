@@ -157,11 +157,11 @@ describe("Test for Reception - Business proposal", () => {
     it("not exists item", async () => {
         const notExistId = ContractUtils.getRandomId();
         await expect(client.methods.getProposal(notExistId)).rejects.toThrow(
-            "No data exists corresponding to the input proposal ID"
+            "Proposal not found: No data exists for the given proposal ID."
         );
         const notExistIndex = (await client.methods.getProposalLength()) + 1;
         await expect(client.methods.getProposalByIndex(notExistIndex, SortType.ASC)).rejects.toThrow(
-            "The index is out of array"
+            "Index out of bounds: The requested index exceeds array limits."
         );
     });
 
@@ -315,12 +315,8 @@ describe("Test for Reception - System proposal", () => {
         }
 
         for (const elem of deployments.accounts.validators) {
-            expect(await client.methods.getVoterOf(elem.validatorKey)).toEqual(
-                elem.voter
-            );
-            expect(await client.methods.getValidatorKeyOf(elem.voter)).toEqual(
-                elem.validatorKey
-            );
+            expect(await client.methods.getVoterOf(elem.validatorKey)).toEqual(elem.voter);
+            expect(await client.methods.getValidatorKeyOf(elem.voter)).toEqual(elem.validatorKey);
         }
     });
 
@@ -377,11 +373,11 @@ describe("Test for Reception - System proposal", () => {
     it("not exists item", async () => {
         const notExistId = ContractUtils.getRandomId();
         await expect(client.methods.getProposal(notExistId)).rejects.toThrow(
-            "No data exists corresponding to the input proposal ID"
+            "Proposal not found: No data exists for the given proposal ID."
         );
         const notExistIndex = (await client.methods.getProposalLength()) + 1;
         await expect(client.methods.getProposalByIndex(notExistIndex, SortType.ASC)).rejects.toThrow(
-            "The index is out of array"
+            "Index out of bounds: The requested index exceeds array limits."
         );
     });
 
