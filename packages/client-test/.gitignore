@@ -141,4 +141,4 @@ artifacts
 
 *.iml
 
-submodules/*
+data/proposal.json
