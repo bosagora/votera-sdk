@@ -270,7 +270,13 @@ async function deployProposalStorage(accounts: IAccount, deployments: Deployment
         const contract = (await factory.connect(accounts.deployer).deploy()) as ProposalStorage;
         await contract.deployed();
         await contract.deployTransaction.wait();
-        await contract.connect(accounts.deployer).initialize(addressStorage.address);
+        await contract.connect(accounts.deployer).initialize(addressStorage.address, {
+            minAssessmentDays: 7,
+            maxAssessmentDays: 14,
+            minVoteDays: 14,
+            maxVoteDays: 28,
+            units: 86400
+        });
 
         deployments.addContract(contractName, contract.address, contract);
         console.log(`Deployed ${contractName} to ${contract.address}`);
