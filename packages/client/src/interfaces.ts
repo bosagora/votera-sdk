@@ -102,7 +102,7 @@ export interface IProposalData {
 }
 
 export interface IScoreData {
-    voter: string;
+    evaluator: string;
     timestamp: number;
     items: [number, number, number, number, number];
 }
@@ -180,6 +180,17 @@ export type VotePostBallotStepValue =
           proposalId: BytesLike;
       };
 export type TransitionStepValue =
+    | {
+          key: NormalSteps.PREPARED;
+          proposalId: BytesLike;
+      }
+    | { key: NormalSteps.SENT; proposalId: BytesLike; txHash: BytesLike }
+    | {
+          key: NormalSteps.DONE;
+          proposalId: BytesLike;
+      };
+
+export type SendVoteCostStepValue =
     | {
           key: NormalSteps.PREPARED;
           proposalId: BytesLike;

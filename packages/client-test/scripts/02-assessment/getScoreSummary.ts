@@ -22,7 +22,7 @@ async function main() {
     const deployments= new Deployments("http://127.0.0.1:8545");
     await deployments.attachAll();
 
-    const ctx = new Context({...deployments.getContextParams(), signer: deployments.accounts.voters[0]});
+    const ctx = new Context({...deployments.getContextParams(), signer: deployments.accounts.evaluators[0]});
     const client = new Client(ctx);
 
     const proposalId = Helper.loadProposalId();

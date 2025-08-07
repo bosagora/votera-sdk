@@ -22,15 +22,15 @@ async function main() {
     const deployments= new Deployments("http://127.0.0.1:8545");
     await deployments.attachAll();
 
-    const ctx = new Context({...deployments.getContextParams(), signer: deployments.accounts.voters[0]});
+    const ctx = new Context({...deployments.getContextParams(), signer: deployments.accounts.evaluators[0]});
     const client = new Client(ctx);
 
     const proposalId = Helper.loadProposalId();
 
     console.log(`Post Score`);
-    for (const voter of deployments.accounts.voters) {
-        client.useSigner(voter);
-        console.log(`voter is ${voter.address}`);
+    for (const evaluator of deployments.accounts.evaluators) {
+        client.useSigner(evaluator);
+        console.log(`evaluator is ${evaluator.address}`);
         for await (const step of client.methods.postScore(proposalId, [10, 10, 5, 5, 5])) {
             switch (step.key) {
                 case NormalSteps.PREPARED:

@@ -110,4 +110,9 @@ export class ClientEstimationMethods extends ClientCore implements IClientEstima
         const gasEstimation = await this.getVoteControllerWithSigner().estimateGas.postBallot(proposalId, choice);
         return this.web3.getApproximateGasFee(gasEstimation.toBigInt());
     }
+
+    public async sendVoteCost(proposalId: BytesLike): Promise<GasFeeEstimation> {
+        const gasEstimation = await this.getVoteControllerWithSigner().estimateGas.sendVoteCost(proposalId);
+        return this.web3.getApproximateGasFee(gasEstimation.toBigInt());
+    }
 }

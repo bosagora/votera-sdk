@@ -1,7 +1,13 @@
 import { GasFeeEstimation } from "../client-common/interfaces/common";
 import { BigNumberish } from "@ethersproject/bignumber";
 import { BytesLike } from "@ethersproject/bytes";
-import { Candidate, ISystemProposalParam, ProposalType, SystemProposalType } from "../interfaces";
+import {
+    Candidate,
+    ISystemProposalParam,
+    ProposalType,
+    SendVoteCostStepValue,
+    SystemProposalType
+} from "../interfaces";
 
 export interface IClientEstimation {
     estimation: IClientEstimationMethods;
@@ -70,4 +76,6 @@ export interface IClientEstimationMethods {
      * @param choice
      */
     postBallot: (proposalId: BytesLike, choice: Candidate) => Promise<GasFeeEstimation>;
+
+    sendVoteCost: (proposalId: BytesLike) => Promise<GasFeeEstimation>;
 }

@@ -36,6 +36,7 @@ interface IParticipantData {
 export interface IAccount {
     users: Wallet[];
     voters: Wallet[];
+    evaluators: Wallet[];
     validators: IParticipantData[];
 }
 
@@ -51,10 +52,12 @@ export class Deployments {
         this.provider = new JsonRpcProvider(url);
 
         const voters: any = JSON.parse(fs.readFileSync("./data/votes.json", "utf8"));
+        const evaluators: any = JSON.parse(fs.readFileSync("./data/evaluator.json", "utf8"));
         const users: any = JSON.parse(fs.readFileSync("./data/accounts.json", "utf8"));
         this.accounts = {
             users: users.map((m: any) => new Wallet(m.privateKey, this.provider)),
             voters: voters.map((m: any) => new Wallet(m.privateKey, this.provider)),
+            evaluators: evaluators.map((m: any) => new Wallet(m.privateKey, this.provider)),
             validators: voters.map((m: any) => {
                 return { voter: m.address, validatorKey: m.validatorKey };
             })

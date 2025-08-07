@@ -8,6 +8,8 @@ import {
     AssessmentController__factory,
     AssessmentStorage,
     AssessmentStorage__factory,
+    BudgetManager,
+    BudgetManager__factory,
     ExecutionManager,
     ExecutionManager__factory,
     ParamStorage,
@@ -30,6 +32,7 @@ import {
     NoSignerError,
     PostBallotError,
     PostCommentError,
+    PostSendVoteCostError,
     ProposalCreationError
 } from "votera-sdk-common";
 
@@ -38,6 +41,7 @@ import { IClientMethods } from "../../interface/IClientMethods";
 import {
     AssessmentPostCommentStepValue,
     AssessmentPostScoreStepValue,
+    AssessmentResult,
     Candidate,
     CreateProposalStepValue,
     ExecutionStepValue,
@@ -51,6 +55,7 @@ import {
     ProposalPeriod,
     ProposalStates,
     ProposalType,
+    SendVoteCostStepValue,
     SortType,
     SystemProposalType,
     TransitionStepValue,
@@ -406,7 +411,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
 
     private toIAssessmentBallotData(res: any): IScoreData {
         return {
-            voter: res.voter,
+            evaluator: res.evaluator,
             timestamp: res.timestamp.toNumber(),
             items: [
                 res.items[0].toNumber(),
@@ -534,6 +539,13 @@ export class ClientMethods extends ClientCore implements IClientMethods {
         if (!signer) throw new NoSignerError();
 
         return VoteController__factory.connect(this.web3.getVoteControllerAddress(), signer);
+    }
+
+    private getBudgetManager(): BudgetManager {
+        const provider = this.web3.getProvider() as Provider;
+        if (!provider) throw new NoProviderError();
+
+        return BudgetManager__factory.connect(this.web3.getBudgetManagerAddress(), provider);
     }
 
     public async getVoteSummary(proposalId: BytesLike): Promise<[number, number, number]> {
@@ -832,5 +844,96 @@ export class ClientMethods extends ClientCore implements IClientMethods {
             const message = ResponseMessage.getEVMErrorMessage(error);
             throw new EVMException(message.code, message.error.message);
         }
+    }
+
+    public async getEvaluatorByIndex(proposalId: BytesLike, idx: number, sortType: SortType): Promise<string> {
+        return await this.getVoteController().getEvaluatorByIndex(proposalId, idx, sortType);
+    }
+
+    public async getEvaluatorList(
+        proposalId: BytesLike,
+        startIndex: number,
+        endIndex: number,
+        sortType: SortType
+    ): Promise<string[]> {
+        try {
+            return await this.getVoteController().getEvaluatorList(proposalId, startIndex, endIndex, sortType);
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
+    }
+
+    public async getEvaluatorLength(proposalId: BytesLike): Promise<number> {
+        try {
+            return (await this.getVoteController().getEvaluatorLength(proposalId)).toNumber();
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
+    }
+
+    public async isEvaluator(proposalId: BytesLike, item: string): Promise<boolean> {
+        try {
+            return await this.getVoteController().isEvaluator(proposalId, item);
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
+    }
+
+    public async *sendVoteCost(proposalId: BytesLike): AsyncGenerator<SendVoteCostStepValue> {
+        yield {
+            key: NormalSteps.PREPARED,
+            proposalId
+        };
+
+        let proposalData;
+        try {
+            proposalData = await this.getReceptionController().getProposal(proposalId);
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
+
+        if (proposalData.assessmentResult !== AssessmentResult.APPROVED) {
+            throw new PostSendVoteCostError();
+        }
+
+        let tx: ContractTransaction;
+        let cr: ContractReceipt;
+        try {
+            tx = await this.getVoteControllerWithSigner().sendVoteCost(proposalId);
+            yield {
+                key: NormalSteps.SENT,
+                proposalId,
+                txHash: tx.hash
+            };
+
+            cr = await tx.wait();
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
+        const log = ContractUtils.findLog(cr, this.getBudgetManager().interface, "SentVoteCost");
+        if (!log) {
+            throw new PostSendVoteCostError();
+        }
+        yield {
+            key: NormalSteps.DONE,
+            proposalId
+        };
+    }
+
+    public async canSendVoteCost(proposalId: BytesLike): Promise<boolean> {
+        let proposalData;
+        try {
+            proposalData = await this.getReceptionController().getProposal(proposalId);
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
+
+        return !(proposalData.assessmentResult !== AssessmentResult.APPROVED || proposalData.sendVoteCost);
     }
 }
