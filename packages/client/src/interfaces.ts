@@ -68,18 +68,18 @@ export enum SortType {
     DSC
 }
 
-export interface IParamValue {
+export interface ParamValue {
     value: BigNumber;
     multiple: BigNumber;
 }
 
-export interface ISystemProposalParam {
+export interface SystemProposalParam {
     name: string;
     value: BigNumber;
     multiple: BigNumber;
 }
 
-export interface IProposalData {
+export interface ProposalData {
     proposalType: ProposalType;
     title: string;
     description: string;
@@ -92,28 +92,29 @@ export interface IProposalData {
     beginVote: number;
     endVote: number;
     systemType: SystemProposalType;
-    params: ISystemProposalParam[];
+    params: SystemProposalParam[];
     states: ProposalStates;
     period: ProposalPeriod;
     assessmentResult: AssessmentResult;
     voteResult: VoteResult;
     executionStates: ExecutionStates;
     sendVoteCost: boolean;
+    chain: number;
 }
 
-export interface IScoreData {
+export interface ScoreData {
     evaluator: string;
     timestamp: number;
     items: [number, number, number, number, number];
 }
 
-export interface ICommentData {
+export interface CommentData {
     writer: string;
     timestamp: number;
     message: string;
 }
 
-export interface IVoteBallotData {
+export interface VoteBallotData {
     voter: string;
     timestamp: number;
     choice: Candidate;
@@ -200,3 +201,20 @@ export type SendVoteCostStepValue =
           key: NormalSteps.DONE;
           proposalId: BytesLike;
       };
+
+export type Pagination = {
+    skip?: number;
+    limit?: number;
+    direction?: SortDirection;
+};
+
+export enum SortDirection {
+    ASC = "asc",
+    DESC = "desc"
+}
+
+export type QueryOption = {
+    limit: number;
+    skip: number;
+    direction: SortDirection;
+};

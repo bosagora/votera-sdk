@@ -6,11 +6,11 @@ import {
     Candidate,
     CreateProposalStepValue,
     ExecutionStepValue,
-    IScoreData,
-    ICommentData,
-    IProposalData,
-    ISystemProposalParam,
-    IVoteBallotData,
+    ScoreData,
+    CommentData,
+    ProposalData,
+    SystemProposalParam,
+    VoteBallotData,
     ProposalPeriod,
     ProposalStates,
     ProposalType,
@@ -20,7 +20,7 @@ import {
     TransitionStepValue,
     VotePostBallotStepValue,
     VoteResult,
-    IParamValue
+    ParamValue
 } from "../interfaces";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 
@@ -62,19 +62,19 @@ export interface IClientMethods extends IClientCore {
         votePeriod: number,
         documentId: BytesLike,
         systemType: SystemProposalType,
-        params: ISystemProposalParam[]
+        params: SystemProposalParam[]
     ) => AsyncGenerator<CreateProposalStepValue>;
 
     /**
      * 등록된 제안의 정보를 요청한다
      * @param proposalId
      */
-    getProposal: (proposalId: BytesLike) => Promise<IProposalData>;
+    getProposal: (proposalId: BytesLike) => Promise<ProposalData>;
     /**
      * 등록된 제안의 정보를 저장된 인덱스로 요청한다
      * @param proposalId
      */
-    getProposalByIndex: (idx: number, sortType: SortType) => Promise<IProposalData>;
+    getProposalByIndex: (idx: number, sortType: SortType) => Promise<ProposalData>;
 
     /**
      * 등록된 제안의 리스트를 요청한다.
@@ -82,7 +82,7 @@ export interface IClientMethods extends IClientCore {
      * @param endIndex 마지막 인덱스 (포함되지 않음)
      * @param sortType 정렬방식
      */
-    getProposalList: (startIndex: number, endIndex: number, sortType: SortType) => Promise<IProposalData[]>;
+    getProposalList: (startIndex: number, endIndex: number, sortType: SortType) => Promise<ProposalData[]>;
 
     /**
      * 전체 제안의 갯수를 리턴한다
@@ -192,7 +192,7 @@ export interface IClientMethods extends IClientCore {
      * @param proposalId
      * @param voter
      */
-    getScore: (proposalId: BytesLike, voter: string) => Promise<IScoreData>;
+    getScore: (proposalId: BytesLike, voter: string) => Promise<ScoreData>;
 
     /**
      * 사전평가의 점수들을 요청한다.
@@ -207,7 +207,7 @@ export interface IClientMethods extends IClientCore {
         startIndex: number,
         endIndex: number,
         sortType: SortType
-    ) => Promise<IScoreData[]>;
+    ) => Promise<ScoreData[]>;
 
     /**
      * 사전평가의 갯수를 리턴한다.
@@ -235,7 +235,7 @@ export interface IClientMethods extends IClientCore {
         startIndex: number,
         endIndex: number,
         sortType: SortType
-    ) => Promise<ICommentData[]>;
+    ) => Promise<CommentData[]>;
 
     /**
      * 게시물의 갯수를 리턴한다
@@ -264,7 +264,7 @@ export interface IClientMethods extends IClientCore {
      * @param proposalId
      * @param voter
      */
-    getBallot: (proposalId: BytesLike, voter: string) => Promise<IVoteBallotData>;
+    getBallot: (proposalId: BytesLike, voter: string) => Promise<VoteBallotData>;
 
     /**
      * 정해진 범위의 투표용지들을 요청한다
@@ -278,7 +278,7 @@ export interface IClientMethods extends IClientCore {
         startIndex: number,
         endIndex: number,
         sortType: SortType
-    ) => Promise<IVoteBallotData[]>;
+    ) => Promise<VoteBallotData[]>;
 
     /**
      * 전체 투표용지의 갯수를 요청한다
@@ -325,37 +325,37 @@ export interface IClientMethods extends IClientCore {
     /**
      * 사업제안에 필요한 수수료정보를 요청한다
      */
-    getFundProposalFee: () => Promise<IParamValue>;
+    getFundProposalFee: () => Promise<ParamValue>;
 
     /**
      * 시스템 제안에 필요한 수수료정보를 요청한다
      */
-    getSystemProposalFee: () => Promise<IParamValue>;
+    getSystemProposalFee: () => Promise<ParamValue>;
 
     /**
      * 투표에 필요한 최소한의 참여자의 정보를 요청한다
      */
-    getVoteQuorumFactor: () => Promise<IParamValue>;
+    getVoteQuorumFactor: () => Promise<ParamValue>;
 
     /**
      * 투표가 가결되기 위해 필요한 찬성과 반대의 차이에 대한 정보를 요청한다
      */
-    getApprovalDiffPercent: () => Promise<IParamValue>;
+    getApprovalDiffPercent: () => Promise<ParamValue>;
 
     /**
      * 투표비용을 요청한다
      */
-    getVoteCost: () => Promise<IParamValue>;
+    getVoteCost: () => Promise<ParamValue>;
 
     /**
      * 사전평가가 통과되기 위한 평균점수를 요청한다
      */
-    getAssessmentAverage: () => Promise<IParamValue>;
+    getAssessmentAverage: () => Promise<ParamValue>;
 
     /**
      * 사전평가가 통과되기 위한 개발점수의 최저점을 요청한다
      */
-    getAssessmentIndividual: () => Promise<IParamValue>;
+    getAssessmentIndividual: () => Promise<ParamValue>;
 
     //--
 
@@ -408,7 +408,6 @@ export interface IClientMethods extends IClientCore {
     // --
 
     sendVoteCost: (proposalId: BytesLike) => AsyncGenerator<SendVoteCostStepValue>;
-
 
     canSendVoteCost: (proposalId: BytesLike) => Promise<boolean>;
 }

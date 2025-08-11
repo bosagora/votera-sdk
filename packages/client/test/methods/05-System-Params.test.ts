@@ -16,7 +16,7 @@ import {
 } from "../../src";
 import { Deployments } from "../helper/Deployments";
 
-import {EvaluatorManager, ParticipantManager} from "votera-contracts-lib";
+import { EvaluatorManager, ParticipantManager } from "votera-contracts-lib";
 
 import { BigNumber } from "@ethersproject/bignumber";
 
@@ -87,7 +87,7 @@ describe("Test for System Params", () => {
             for (let idx = 0; idx < deployments.accounts.evaluators.length; idx += size) {
                 await evaluatorManager
                     .connect(deployments.accounts.owner)
-                    .addMembers(deployments.accounts.evaluators.slice(idx, idx + size).map(m=> m.address));
+                    .addMembers(deployments.accounts.evaluators.slice(idx, idx + size).map((m) => m.address));
             }
         });
 

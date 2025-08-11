@@ -14,7 +14,7 @@ import {
 import { NoSignerError } from "votera-sdk-common";
 
 import { BigNumberish } from "@ethersproject/bignumber";
-import { Candidate, ISystemProposalParam, ProposalType, SystemProposalType } from "../../interfaces";
+import { Candidate, SystemProposalParam, ProposalType, SystemProposalType } from "../../interfaces";
 import { BytesLike } from "@ethersproject/bytes";
 
 export class ClientEstimationMethods extends ClientCore implements IClientEstimationMethods {
@@ -48,7 +48,7 @@ export class ClientEstimationMethods extends ClientCore implements IClientEstima
         votePeriod: number,
         documentId: BytesLike,
         systemType: SystemProposalType,
-        params: ISystemProposalParam[]
+        params: SystemProposalParam[]
     ): Promise<GasFeeEstimation> {
         const contract = this.getReceptionControllerWithSigner();
         const gasEstimation = await contract.estimateGas.createProposal({

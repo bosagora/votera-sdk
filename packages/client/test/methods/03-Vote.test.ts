@@ -14,7 +14,7 @@ import {
     SortType
 } from "../../src";
 import { Deployments } from "../helper/Deployments";
-import {EvaluatorManager, ParticipantManager} from "votera-contracts-lib";
+import { EvaluatorManager, ParticipantManager } from "votera-contracts-lib";
 
 describe("Test for Vote", () => {
     const [, owner] = GanacheServer.accounts();
@@ -81,7 +81,7 @@ describe("Test for Vote", () => {
         for (let idx = 0; idx < deployments.accounts.evaluators.length; idx += size) {
             await evaluatorManager
                 .connect(deployments.accounts.owner)
-                .addMembers(deployments.accounts.evaluators.slice(idx, idx + size).map(m=> m.address));
+                .addMembers(deployments.accounts.evaluators.slice(idx, idx + size).map((m) => m.address));
         }
     });
 
