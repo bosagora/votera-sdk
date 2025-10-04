@@ -12,14 +12,15 @@ import {
     AssessmentResult,
     Candidate,
     VoteResult,
-    ExecutionStates, ContextParams
+    ExecutionStates,
+    ContextParams,
 } from "votera-sdk-client";
-import {Deployments, Helper} from "../helper/Deployments";
+import { Deployments, Helper } from "../helper/Deployments";
 
 import { expect } from "chai";
 
 async function main() {
-    const deployments= new Deployments("http://127.0.0.1:8545");
+    const deployments = new Deployments();
     await deployments.attachAll();
 
     const proposalData = {
@@ -30,13 +31,16 @@ async function main() {
         proposalId: ContractUtils.getRandomId(),
         fundAmount: Amount.make(0, 18).value,
         assessmentPeriod: 0,
-        votePeriod: 10,
+        votePeriod: 30,
         documentId: ContractUtils.getRandomId(),
         systemType: SystemProposalType.NORMAL,
-        params: []
+        params: [],
     };
 
-    const ctx = new Context({...deployments.getContextParams(), signer: deployments.accounts.voters[0]});
+    const ctx = new Context({
+        ...deployments.getContextParams(),
+        signer: deployments.accounts.voters[0],
+    });
     const client = new Client(ctx);
 
     for await (const step of client.methods.createProposal(
@@ -73,4 +77,3 @@ main().catch((error) => {
     console.error(error);
     process.exitCode = 1;
 });
-

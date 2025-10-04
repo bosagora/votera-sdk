@@ -10,22 +10,26 @@ import {
     AssessmentController__factory,
     AssessmentStorage,
     AssessmentStorage__factory,
-    BudgetManager,
-    BudgetManager__factory,
+    BudgetManagerV2,
+    BudgetManagerV2__factory,
     ExecutionManager,
     ExecutionManager__factory,
+    EvaluatorManager,
+    EvaluatorManager__factory,
     ParamStorage,
     ParamStorage__factory,
     ParticipantStorage,
+    ParticipantStorage__factory,
+    ParticipantManager,
+    ParticipantManager__factory,
     ProposalStorage,
     ProposalStorage__factory,
-    ReceptionController,
-    ReceptionController__factory,
-    VoteController,
-    VoteController__factory,
+    ReceptionControllerV2,
+    ReceptionControllerV2__factory,
+    VoteControllerV2,
+    VoteControllerV2__factory,
     VoteStorage,
     VoteStorage__factory,
-    ParticipantStorage__factory
 } from "votera-contracts-lib";
 
 import {
@@ -35,7 +39,7 @@ import {
     PostBallotError,
     PostCommentError,
     PostSendVoteCostError,
-    ProposalCreationError
+    ProposalCreationError,
 } from "votera-sdk-common";
 
 import { ClientCore, Context } from "../../client-common";
@@ -45,24 +49,25 @@ import {
     AssessmentPostScoreStepValue,
     AssessmentResult,
     Candidate,
-    CreateProposalStepValue,
-    ExecutionStepValue,
     CommentData,
+    CreateProposalStepValue,
+    EvaluationData,
+    ExecutionStepValue,
+    NormalSteps,
     ParamValue,
     ProposalData,
-    ScoreData,
-    SystemProposalParam,
-    VoteBallotData,
-    NormalSteps,
     ProposalPeriod,
     ProposalStates,
     ProposalType,
+    ScoreData,
     SendVoteCostStepValue,
     SortType,
+    SystemProposalParam,
     SystemProposalType,
     TransitionStepValue,
+    VoteBallotData,
     VotePostBallotStepValue,
-    VoteResult
+    VoteResult,
 } from "../../interfaces";
 import { ContractUtils } from "../../utils/ContractUtils";
 import { ResponseMessage } from "../../utils/ResponseMessage";
@@ -81,6 +86,20 @@ export class ClientMethods extends ClientCore implements IClientMethods {
         return await signer.getAddress();
     }
 
+    private getParticipantManager(): ParticipantManager {
+        const provider = this.web3.getProvider() as Provider;
+        if (!provider) throw new NoProviderError();
+
+        return ParticipantManager__factory.connect(this.web3.getParticipantManagerAddress(), provider);
+    }
+
+    private getEvaluatorManager(): EvaluatorManager {
+        const provider = this.web3.getProvider() as Provider;
+        if (!provider) throw new NoProviderError();
+
+        return EvaluatorManager__factory.connect(this.web3.getEvaluatorManagerAddress(), provider);
+    }
+
     private getProposalStorage(): ProposalStorage {
         const provider = this.web3.getProvider() as Provider;
         if (!provider) throw new NoProviderError();
@@ -95,18 +114,18 @@ export class ClientMethods extends ClientCore implements IClientMethods {
         return ParticipantStorage__factory.connect(this.web3.getParticipantStorageAddress(), provider);
     }
 
-    private getReceptionController(): ReceptionController {
+    private getReceptionController(): ReceptionControllerV2 {
         const provider = this.web3.getProvider() as Provider;
         if (!provider) throw new NoProviderError();
 
-        return ReceptionController__factory.connect(this.web3.getReceptionControllerAddress(), provider);
+        return ReceptionControllerV2__factory.connect(this.web3.getReceptionControllerAddress(), provider);
     }
 
-    private getReceptionControllerWithSigner(): ReceptionController {
+    private getReceptionControllerWithSigner(): ReceptionControllerV2 {
         const signer = this.web3.getConnectedSigner();
         if (!signer) throw new NoSignerError();
 
-        return ReceptionController__factory.connect(this.web3.getReceptionControllerAddress(), signer);
+        return ReceptionControllerV2__factory.connect(this.web3.getReceptionControllerAddress(), signer);
     }
 
     public async isAvailableProposalId(proposalId: BytesLike): Promise<boolean> {
@@ -116,9 +135,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
     public async getProposalFee(proposalType: ProposalType, fundAmount: BigNumberish): Promise<BigNumber> {
         if (proposalType === ProposalType.FUND) {
             const param = await this.getFundProposalFee();
-            return BigNumber.from(fundAmount)
-                .mul(param.value)
-                .div(param.multiple);
+            return BigNumber.from(fundAmount).mul(param.value).div(param.multiple);
         } else {
             const param = await this.getSystemProposalFee();
             return param.value.div(param.multiple);
@@ -139,7 +156,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
     ): AsyncGenerator<CreateProposalStepValue> {
         yield {
             key: NormalSteps.PREPARED,
-            proposalId
+            proposalId,
         };
 
         const fee = await this.getProposalFee(proposalType, fundAmount);
@@ -158,7 +175,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
                     votePeriod,
                     documentId,
                     systemType,
-                    params
+                    params,
                 },
                 { value: fee }
             );
@@ -166,7 +183,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
             yield {
                 key: NormalSteps.SENT,
                 proposalId,
-                txHash: tx.hash
+                txHash: tx.hash,
             };
             cr = await tx.wait();
         } catch (error) {
@@ -182,7 +199,40 @@ export class ClientMethods extends ClientCore implements IClientMethods {
 
         yield {
             key: NormalSteps.DONE,
-            proposalId
+            proposalId,
+        };
+    }
+
+    public async *createParticipantPart(
+        proposalId: BytesLike,
+        startIndex: number,
+        endIndex: number
+    ): AsyncGenerator<CreateProposalStepValue> {
+        yield {
+            key: NormalSteps.PREPARED,
+            proposalId,
+        };
+
+        const contract = this.getReceptionControllerWithSigner();
+        let tx: ContractTransaction;
+        let cr: ContractReceipt;
+        try {
+            tx = await contract.createParticipantPart(proposalId, startIndex, endIndex);
+
+            yield {
+                key: NormalSteps.SENT,
+                proposalId,
+                txHash: tx.hash,
+            };
+            cr = await tx.wait();
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
+
+        yield {
+            key: NormalSteps.DONE,
+            proposalId,
         };
     }
 
@@ -207,7 +257,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
                 return {
                     name: m.name,
                     value: m.value,
-                    multiple: m.multiple
+                    multiple: m.multiple,
                 };
             }),
             states: res.states,
@@ -216,7 +266,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
             voteResult: res.voteResult,
             executionStates: res.executionStates,
             sendVoteCost: res.sendVoteCost,
-            chain: network.chainId
+            chain: network.chainId,
         };
     }
 
@@ -242,6 +292,8 @@ export class ClientMethods extends ClientCore implements IClientMethods {
 
     public async getProposalList(startIndex: number, endIndex: number, sortType: SortType): Promise<ProposalData[]> {
         try {
+            const length = await this.getReceptionController().getLength();
+            if (length.toNumber() === 0) return [];
             const res = await this.getReceptionController().getProposalList(startIndex, endIndex, sortType);
             return await Promise.all(res.map(async (m) => await this.toProposalData(m)));
         } catch (error) {
@@ -253,7 +305,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
     public async *transition(proposalId: BytesLike): AsyncGenerator<TransitionStepValue> {
         yield {
             key: NormalSteps.PREPARED,
-            proposalId
+            proposalId,
         };
 
         let tx: ContractTransaction;
@@ -263,7 +315,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
             yield {
                 key: NormalSteps.SENT,
                 proposalId,
-                txHash: tx.hash
+                txHash: tx.hash,
             };
 
             await tx.wait();
@@ -273,7 +325,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
         }
         yield {
             key: NormalSteps.DONE,
-            proposalId
+            proposalId,
         };
     }
 
@@ -317,6 +369,15 @@ export class ClientMethods extends ClientCore implements IClientMethods {
         try {
             const res = await this.getReceptionController().getProposal(proposalId);
             return res.voteResult;
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
+    }
+
+    public async getEstimateVoteResult(proposalId: BytesLike): Promise<VoteResult> {
+        try {
+            return await this.getVoteStorage().getVoteResult(proposalId);
         } catch (error) {
             const message = ResponseMessage.getEVMErrorMessage(error);
             throw new EVMException(message.code, message.error.message);
@@ -387,7 +448,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
     ): AsyncGenerator<AssessmentPostScoreStepValue> {
         yield {
             key: NormalSteps.PREPARED,
-            proposalId
+            proposalId,
         };
 
         let tx: ContractTransaction;
@@ -397,7 +458,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
             yield {
                 key: NormalSteps.SENT,
                 proposalId,
-                txHash: tx.hash
+                txHash: tx.hash,
             };
 
             cr = await tx.wait();
@@ -411,7 +472,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
         }
         yield {
             key: NormalSteps.DONE,
-            proposalId
+            proposalId,
         };
     }
 
@@ -424,8 +485,8 @@ export class ClientMethods extends ClientCore implements IClientMethods {
                 res.items[1].toNumber(),
                 res.items[2].toNumber(),
                 res.items[3].toNumber(),
-                res.items[4].toNumber()
-            ]
+                res.items[4].toNumber(),
+            ],
         };
     }
 
@@ -433,7 +494,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
         return {
             writer: res.writer,
             timestamp: res.timestamp.toNumber(),
-            message: res.message
+            message: res.message,
         };
     }
 
@@ -454,6 +515,8 @@ export class ClientMethods extends ClientCore implements IClientMethods {
         sortType: SortType
     ): Promise<ScoreData[]> {
         try {
+            const length = await this.getScoreLength(proposalId);
+            if (length === 0) return [];
             const res = await this.getAssessmentController().getScoreList(proposalId, startIndex, endIndex, sortType);
             return res.map((m) => this.toIAssessmentBallotData(m));
         } catch (error) {
@@ -474,7 +537,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
     public async *postComment(proposalId: BytesLike, message: string): AsyncGenerator<AssessmentPostCommentStepValue> {
         yield {
             key: NormalSteps.PREPARED,
-            proposalId
+            proposalId,
         };
 
         let tx: ContractTransaction;
@@ -484,7 +547,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
             yield {
                 key: NormalSteps.SENT,
                 proposalId,
-                txHash: tx.hash
+                txHash: tx.hash,
             };
 
             cr = await tx.wait();
@@ -498,7 +561,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
         }
         yield {
             key: NormalSteps.DONE,
-            proposalId
+            proposalId,
         };
     }
 
@@ -509,6 +572,8 @@ export class ClientMethods extends ClientCore implements IClientMethods {
         sortType: SortType
     ): Promise<CommentData[]> {
         try {
+            const length = await this.getCommentLength(proposalId);
+            if (length === 0) return [];
             const res = await this.getAssessmentController().getCommentList(proposalId, startIndex, endIndex, sortType);
             return res.map((m) => this.toICommentDataOfAssessment(m));
         } catch (error) {
@@ -533,25 +598,25 @@ export class ClientMethods extends ClientCore implements IClientMethods {
         return VoteStorage__factory.connect(this.web3.getVoteStorageAddress(), provider);
     }
 
-    private getVoteController(): VoteController {
+    private getVoteController(): VoteControllerV2 {
         const provider = this.web3.getProvider() as Provider;
         if (!provider) throw new NoProviderError();
 
-        return VoteController__factory.connect(this.web3.getVoteControllerAddress(), provider);
+        return VoteControllerV2__factory.connect(this.web3.getVoteControllerAddress(), provider);
     }
 
-    private getVoteControllerWithSigner(): VoteController {
+    private getVoteControllerWithSigner(): VoteControllerV2 {
         const signer = this.web3.getConnectedSigner();
         if (!signer) throw new NoSignerError();
 
-        return VoteController__factory.connect(this.web3.getVoteControllerAddress(), signer);
+        return VoteControllerV2__factory.connect(this.web3.getVoteControllerAddress(), signer);
     }
 
-    private getBudgetManager(): BudgetManager {
+    private getBudgetManager(): BudgetManagerV2 {
         const provider = this.web3.getProvider() as Provider;
         if (!provider) throw new NoProviderError();
 
-        return BudgetManager__factory.connect(this.web3.getBudgetManagerAddress(), provider);
+        return BudgetManagerV2__factory.connect(this.web3.getBudgetManagerAddress(), provider);
     }
 
     public async getVoteSummary(proposalId: BytesLike): Promise<[number, number, number]> {
@@ -567,7 +632,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
     public async *postBallot(proposalId: BytesLike, choice: Candidate): AsyncGenerator<VotePostBallotStepValue> {
         yield {
             key: NormalSteps.PREPARED,
-            proposalId
+            proposalId,
         };
 
         let tx: ContractTransaction;
@@ -577,7 +642,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
             yield {
                 key: NormalSteps.SENT,
                 proposalId,
-                txHash: tx.hash
+                txHash: tx.hash,
             };
 
             cr = await tx.wait();
@@ -591,22 +656,23 @@ export class ClientMethods extends ClientCore implements IClientMethods {
         }
         yield {
             key: NormalSteps.DONE,
-            proposalId
+            proposalId,
         };
     }
 
-    private toIVoteBallotData(res: any): VoteBallotData {
+    private async toIVoteBallotData(res: any): Promise<VoteBallotData> {
         return {
             voter: res.voter,
+            validatorKey: await this.getValidatorKeyOf(res.voter),
             timestamp: res.timestamp.toNumber(),
-            choice: res.choice
+            choice: res.choice,
         };
     }
 
     public async getBallot(proposalId: BytesLike, voter: string): Promise<VoteBallotData> {
         try {
             const res = await this.getVoteController().getBallot(proposalId, voter);
-            return this.toIVoteBallotData(res);
+            return await this.toIVoteBallotData(res);
         } catch (error) {
             const message = ResponseMessage.getEVMErrorMessage(error);
             throw new EVMException(message.code, message.error.message);
@@ -620,8 +686,10 @@ export class ClientMethods extends ClientCore implements IClientMethods {
         sortType: SortType
     ): Promise<VoteBallotData[]> {
         try {
+            const length = await this.getBallotLength(proposalId);
+            if (length === 0) return [];
             const res = await this.getVoteController().getBallotList(proposalId, startIndex, endIndex, sortType);
-            return res.map((m) => this.toIVoteBallotData(m));
+            return await Promise.all(res.map((m) => this.toIVoteBallotData(m)));
         } catch (error) {
             const message = ResponseMessage.getEVMErrorMessage(error);
             throw new EVMException(message.code, message.error.message);
@@ -643,6 +711,8 @@ export class ClientMethods extends ClientCore implements IClientMethods {
         sortType: SortType
     ): Promise<string[]> {
         try {
+            const length = await this.getVoterLength(proposalId);
+            if (length === 0) return [];
             return await this.getVoteController().getVoterList(proposalId, startIndex, endIndex, sortType);
         } catch (error) {
             const message = ResponseMessage.getEVMErrorMessage(error);
@@ -705,7 +775,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
     public async *execute(proposalId: BytesLike): AsyncGenerator<ExecutionStepValue> {
         yield {
             key: NormalSteps.PREPARED,
-            proposalId
+            proposalId,
         };
 
         let tx: ContractTransaction;
@@ -715,7 +785,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
             yield {
                 key: NormalSteps.SENT,
                 proposalId,
-                txHash: tx.hash
+                txHash: tx.hash,
             };
 
             cr = await tx.wait();
@@ -731,7 +801,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
 
         yield {
             key: NormalSteps.DONE,
-            proposalId
+            proposalId,
         };
     }
 
@@ -749,7 +819,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
             const res = await this.getParamStorage().getFundProposalFee();
             return {
                 value: res.value,
-                multiple: res.multiple
+                multiple: res.multiple,
             };
         } catch (error) {
             const message = ResponseMessage.getEVMErrorMessage(error);
@@ -762,19 +832,20 @@ export class ClientMethods extends ClientCore implements IClientMethods {
             const res = await this.getParamStorage().getSystemProposalFee();
             return {
                 value: res.value,
-                multiple: res.multiple
+                multiple: res.multiple,
             };
         } catch (error) {
             const message = ResponseMessage.getEVMErrorMessage(error);
             throw new EVMException(message.code, message.error.message);
         }
     }
+
     public async getVoteQuorumFactor(): Promise<ParamValue> {
         try {
             const res = await this.getParamStorage().getVoteQuorumFactor();
             return {
                 value: res.value,
-                multiple: res.multiple
+                multiple: res.multiple,
             };
         } catch (error) {
             const message = ResponseMessage.getEVMErrorMessage(error);
@@ -787,7 +858,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
             const res = await this.getParamStorage().getApprovalDiffPercent();
             return {
                 value: res.value,
-                multiple: res.multiple
+                multiple: res.multiple,
             };
         } catch (error) {
             const message = ResponseMessage.getEVMErrorMessage(error);
@@ -800,7 +871,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
             const res = await this.getParamStorage().getVoteCost();
             return {
                 value: res.value,
-                multiple: res.multiple
+                multiple: res.multiple,
             };
         } catch (error) {
             const message = ResponseMessage.getEVMErrorMessage(error);
@@ -813,7 +884,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
             const res = await this.getParamStorage().getAssessmentAverage();
             return {
                 value: res.value,
-                multiple: res.multiple
+                multiple: res.multiple,
             };
         } catch (error) {
             const message = ResponseMessage.getEVMErrorMessage(error);
@@ -826,8 +897,17 @@ export class ClientMethods extends ClientCore implements IClientMethods {
             const res = await this.getParamStorage().getAssessmentIndividual();
             return {
                 value: res.value,
-                multiple: res.multiple
+                multiple: res.multiple,
             };
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
+    }
+
+    public async isParticipant(voter: string): Promise<boolean> {
+        try {
+            return await this.getParticipantStorage().isParticipant(voter);
         } catch (error) {
             const message = ResponseMessage.getEVMErrorMessage(error);
             throw new EVMException(message.code, message.error.message);
@@ -863,6 +943,8 @@ export class ClientMethods extends ClientCore implements IClientMethods {
         sortType: SortType
     ): Promise<string[]> {
         try {
+            const length = await this.getEvaluatorLength(proposalId);
+            if (length === 0) return [];
             return await this.getVoteController().getEvaluatorList(proposalId, startIndex, endIndex, sortType);
         } catch (error) {
             const message = ResponseMessage.getEVMErrorMessage(error);
@@ -891,7 +973,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
     public async *sendVoteCost(proposalId: BytesLike): AsyncGenerator<SendVoteCostStepValue> {
         yield {
             key: NormalSteps.PREPARED,
-            proposalId
+            proposalId,
         };
 
         let proposalData;
@@ -913,7 +995,7 @@ export class ClientMethods extends ClientCore implements IClientMethods {
             yield {
                 key: NormalSteps.SENT,
                 proposalId,
-                txHash: tx.hash
+                txHash: tx.hash,
             };
 
             cr = await tx.wait();
@@ -927,7 +1009,54 @@ export class ClientMethods extends ClientCore implements IClientMethods {
         }
         yield {
             key: NormalSteps.DONE,
-            proposalId
+            proposalId,
+        };
+    }
+
+    public async *sendVoteCostPart(
+        proposalId: BytesLike,
+        startIndex: number,
+        endIndex: number
+    ): AsyncGenerator<SendVoteCostStepValue> {
+        yield {
+            key: NormalSteps.PREPARED,
+            proposalId,
+        };
+
+        let proposalData;
+        try {
+            proposalData = await this.getReceptionController().getProposal(proposalId);
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
+
+        if (proposalData.assessmentResult !== AssessmentResult.APPROVED) {
+            throw new PostSendVoteCostError();
+        }
+
+        let tx: ContractTransaction;
+        let cr: ContractReceipt;
+        try {
+            tx = await this.getVoteControllerWithSigner().sendVoteCostPart(proposalId, startIndex, endIndex);
+            yield {
+                key: NormalSteps.SENT,
+                proposalId,
+                txHash: tx.hash,
+            };
+
+            cr = await tx.wait();
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
+        const log = ContractUtils.findLog(cr, this.getBudgetManager().interface, "SentVoteCost");
+        if (!log) {
+            throw new PostSendVoteCostError();
+        }
+        yield {
+            key: NormalSteps.DONE,
+            proposalId,
         };
     }
 
@@ -941,5 +1070,141 @@ export class ClientMethods extends ClientCore implements IClientMethods {
         }
 
         return !(proposalData.assessmentResult !== AssessmentResult.APPROVED || proposalData.sendVoteCost);
+    }
+
+    public async getEvaluationOfAllMembersList(
+        proposalId: BytesLike,
+        startIndex: number,
+        endIndex: number,
+        sortType: SortType
+    ): Promise<EvaluationData[]> {
+        try {
+            const length = await this.getEvaluatorLength(proposalId);
+            if (length === 0) return [];
+            const evaluations: EvaluationData[] = [];
+            const evaluators = await this.getEvaluatorList(proposalId, startIndex, endIndex, sortType);
+            for (const evaluator of evaluators) {
+                const scoreData = await this.getScore(proposalId, evaluator);
+                if (scoreData.evaluator === evaluator) {
+                    evaluations.push({
+                        evaluator,
+                        isEvaluated: true,
+                        timestamp: scoreData.timestamp,
+                        items: scoreData.items,
+                    });
+                } else {
+                    evaluations.push({
+                        evaluator,
+                        isEvaluated: false,
+                        timestamp: scoreData.timestamp,
+                        items: scoreData.items,
+                    });
+                }
+            }
+            return evaluations;
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
+    }
+
+    public async getBallotOfAllMembersList(
+        proposalId: BytesLike,
+        startIndex: number,
+        endIndex: number,
+        sortType: SortType
+    ): Promise<VoteBallotData[]> {
+        try {
+            const length = await this.getVoterLength(proposalId);
+            if (length === 0) return [];
+            const ballots: VoteBallotData[] = [];
+            const voters = await this.getVoterList(proposalId, startIndex, endIndex, sortType);
+            for (const voter of voters) {
+                const ballotData = await this.getBallot(proposalId, voter);
+                const validatorKey = await this.getValidatorKeyOf(voter);
+                if (ballotData.voter === voter) {
+                    ballots.push({
+                        voter,
+                        validatorKey,
+                        timestamp: ballotData.timestamp,
+                        choice: ballotData.choice,
+                    });
+                } else {
+                    ballots.push({
+                        voter,
+                        validatorKey,
+                        timestamp: 0,
+                        choice: Candidate.BLANK,
+                    });
+                }
+            }
+            return ballots;
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
+    }
+
+    /**
+     * 특정범위의 유권자들의 정보를 요청한다
+     * @param startIndex
+     * @param endIndex
+     * @param sortType
+     */
+    public async getVoterListOfManager(startIndex: number, endIndex: number, sortType: SortType): Promise<string[]> {
+        try {
+            const length = await this.getVoterLengthOfManager();
+            if (length === 0) return [];
+            const values = await this.getParticipantManager().getParticipantList(startIndex, endIndex, sortType);
+            return values.map((m) => m.voter);
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
+    }
+
+    /**
+     * 전체 유권자들의 갯수를 요청한다
+     */
+    public async getVoterLengthOfManager(): Promise<number> {
+        try {
+            return (await this.getParticipantManager().getLength()).toNumber();
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
+    }
+
+    /**
+     * 전체 사전평가 구성원들 중 지정된 범위에 존재하는 사전평가 구성원들을 제공한다
+     * @param startIndex 시작 인덱스
+     * @param endIndex 마지막 인덱스
+     * @param sortType 정렬방식
+     */
+    public async getEvaluatorListOfManager(
+        startIndex: number,
+        endIndex: number,
+        sortType: SortType
+    ): Promise<string[]> {
+        try {
+            const length = await this.getEvaluatorLengthOfManager();
+            if (length === 0) return [];
+            return await this.getEvaluatorManager().getMemberList(startIndex, endIndex, sortType);
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
+    }
+
+    /**
+     * 전체 사전평가 구성원들의 갯수를 제공한다
+     */
+    public async getEvaluatorLengthOfManager(): Promise<number> {
+        try {
+            return (await this.getEvaluatorManager().getLength()).toNumber();
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
     }
 }

@@ -1,24 +1,36 @@
 {
-  "name": "votera-chain",
+  "name": "votera-sdk-client-test",
   "version": "1.0.0",
   "main": "index.js",
-  "repository": "https://github.com/MichaelKim20/votera-chain.git",
-  "author": "Michael Kim <michael.kim.200518@gmail.com>",
+  "repository": "https://github.com/bosagora/votera-sdk.git",
+  "author": "BOSagora Foundation",
   "license": "MIT",
   "directories": {
     "test": "test"
   },
   "scripts": {
     "00-checkWeb3": "npx ts-node scripts/00-check/checkWeb3.ts",
+    "00-checkContracts": "npx ts-node scripts/00-check/checkContracts.ts",
+    "00-getVoters": "npx ts-node scripts/00-check/getVoters.ts",
+    "00-getEvaluators": "npx ts-node scripts/00-check/getEvaluators.ts",
+    "00-getBalanceOfCommonsBudget": "npx ts-node scripts/00-check/getBalanceOfCommonsBudget.ts",
+    "01-getEstimateFee": "npx ts-node scripts/01-proposal/getEstimateFee.ts",
     "01-createFundingProposal": "npx ts-node scripts/01-proposal/createFundingProposal.ts",
     "01-createSystemProposal": "npx ts-node scripts/01-proposal/createSystemProposal.ts",
+    "01-createVoters": "npx ts-node scripts/01-proposal/createVoters.ts",
+    "01-getVoters": "npx ts-node scripts/01-proposal/getVoters.ts",
     "01-getProposal": "npx ts-node scripts/01-proposal/getProposal.ts",
+    "01-getProposalLength": "npx ts-node scripts/01-proposal/getProposalLength.ts",
+    "01-getProposalList": "npx ts-node scripts/01-proposal/getProposalList.ts",
     "01-getProposalStates": "npx ts-node scripts/01-proposal/getProposalStates.ts",
     "02-postScore": "npx ts-node scripts/02-assessment/postScore.ts",
     "02-getScoreSummary": "npx ts-node scripts/02-assessment/getScoreSummary.ts",
+    "03-getEvaluationOfAllMembersList": "npx ts-node scripts/02-assessment/getEvaluationOfAllMember.ts",
     "03-transition": "npx ts-node scripts/03-transition/transition.ts",
+    "04-sendVoteCost": "npx ts-node scripts/04-vote/sendVoteCost.ts",
     "04-postBallot": "npx ts-node scripts/04-vote/postBallot.ts",
     "04-getBallotSummary": "npx ts-node scripts/04-vote/getBallotSummary.ts",
+    "04-getBallotOfAllMembersList": "npx ts-node scripts/04-vote/getBallotOfAllMember.ts",
     "05-transition": "npx ts-node scripts/05-transition/transition.ts",
     "06-withdrawal": "npx ts-node scripts/06-execution/withdrawal.ts"
   },
@@ -43,10 +55,11 @@
     "assert": "^2.1.0",
     "beautify": "^0.0.8",
     "chai": "^4.3.7",
+    "dotenv": "^16.3.1",
     "ethers": "^5.7.0",
     "mocha": "10.1.0",
     "ts-node": "^10.5.0",
     "typescript": "^4.5.5",
-    "votera-sdk-client": "^1.5.1"
+    "votera-sdk-client": "^1.7.2"
   }
 }

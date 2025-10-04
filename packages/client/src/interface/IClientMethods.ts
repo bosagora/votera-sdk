@@ -1,4 +1,4 @@
-import { IClientCore } from "../client-common";
+import { GasFeeEstimation, IClientCore } from "../client-common";
 import { BytesLike } from "@ethersproject/bytes";
 import {
     AssessmentPostScoreStepValue,
@@ -20,7 +20,8 @@ import {
     TransitionStepValue,
     VotePostBallotStepValue,
     VoteResult,
-    ParamValue
+    ParamValue,
+    EvaluationData,
 } from "../interfaces";
 import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 
@@ -63,6 +64,12 @@ export interface IClientMethods extends IClientCore {
         documentId: BytesLike,
         systemType: SystemProposalType,
         params: SystemProposalParam[]
+    ) => AsyncGenerator<CreateProposalStepValue>;
+
+    createParticipantPart: (
+        proposalId: BytesLike,
+        startIndex: number,
+        endIndex: number
     ) => AsyncGenerator<CreateProposalStepValue>;
 
     /**
@@ -121,6 +128,7 @@ export interface IClientMethods extends IClientCore {
      * @param proposalId
      */
     getVoteResult: (proposalId: BytesLike) => Promise<VoteResult>;
+    getEstimateVoteResult: (proposalId: BytesLike) => Promise<VoteResult>;
 
     /**
      * 사전평가 결과를 요청한다
@@ -409,5 +417,53 @@ export interface IClientMethods extends IClientCore {
 
     sendVoteCost: (proposalId: BytesLike) => AsyncGenerator<SendVoteCostStepValue>;
 
+    sendVoteCostPart: (
+        proposalId: BytesLike,
+        startIndex: number,
+        endIndex: number
+    ) => AsyncGenerator<SendVoteCostStepValue>;
+
     canSendVoteCost: (proposalId: BytesLike) => Promise<boolean>;
+
+    getEvaluationOfAllMembersList: (
+        proposalId: BytesLike,
+        startIndex: number,
+        endIndex: number,
+        sortType: SortType
+    ) => Promise<EvaluationData[]>;
+
+    getBallotOfAllMembersList: (
+        proposalId: BytesLike,
+        startIndex: number,
+        endIndex: number,
+        sortType: SortType
+    ) => Promise<VoteBallotData[]>;
+
+    /**
+     * 특정범위의 유권자들의 정보를 요청한다
+     * @param startIndex
+     * @param endIndex
+     * @param sortType
+     */
+    getVoterListOfManager: (startIndex: number, endIndex: number, sortType: SortType) => Promise<string[]>;
+
+    /**
+     * 전체 유권자들의 갯수를 요청한다
+     */
+    getVoterLengthOfManager: () => Promise<number>;
+
+    /**
+     * 전체 사전평가 구성원들 중 지정된 범위에 존재하는 사전평가 구성원들을 제공한다
+     * @param startIndex 시작 인덱스
+     * @param endIndex 마지막 인덱스
+     * @param sortType 정렬방식
+     */
+    getEvaluatorListOfManager: (startIndex: number, endIndex: number, sortType: SortType) => Promise<string[]>;
+
+    /**
+     * 전체 사전평가 구성원들의 갯수를 제공한다
+     */
+    getEvaluatorLengthOfManager: () => Promise<number>;
+
+    isParticipant: (voter: string) => Promise<boolean>;
 }

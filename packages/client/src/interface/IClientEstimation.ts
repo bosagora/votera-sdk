@@ -1,7 +1,7 @@
 import { GasFeeEstimation } from "../client-common/interfaces/common";
-import { BigNumberish } from "@ethersproject/bignumber";
+import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
 import { BytesLike } from "@ethersproject/bytes";
-import { Candidate, SystemProposalParam, ProposalType, SystemProposalType } from "../interfaces";
+import { Candidate, SystemProposalParam, ProposalType, SystemProposalType, SendVoteCostStepValue } from "../interfaces";
 
 export interface IClientEstimation {
     estimation: IClientEstimationMethods;
@@ -33,6 +33,8 @@ export interface IClientEstimationMethods {
         systemType: SystemProposalType,
         params: SystemProposalParam[]
     ) => Promise<GasFeeEstimation>;
+
+    getProposalFee: (proposalType: ProposalType, fundAmount: BigNumberish) => Promise<BigNumber>;
 
     /**
      * 제안의 상태를 다음 단계로 이동시킬대 사용한다.

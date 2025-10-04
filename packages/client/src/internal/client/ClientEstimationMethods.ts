@@ -6,16 +6,21 @@ import {
     AssessmentController__factory,
     ExecutionManager,
     ExecutionManager__factory,
-    ReceptionController,
-    ReceptionController__factory,
-    VoteController,
-    VoteController__factory
+    ParamStorage,
+    ParamStorage__factory,
+    ReceptionControllerV2,
+    ReceptionControllerV2__factory,
+    VoteControllerV2,
+    VoteControllerV2__factory,
 } from "votera-contracts-lib";
-import { NoSignerError } from "votera-sdk-common";
+import { NoProviderError, NoSignerError } from "votera-sdk-common";
 
-import { BigNumberish } from "@ethersproject/bignumber";
-import { Candidate, SystemProposalParam, ProposalType, SystemProposalType } from "../../interfaces";
+import { BigNumber, BigNumberish } from "@ethersproject/bignumber";
+import { Candidate, SystemProposalParam, ProposalType, SystemProposalType, ParamValue } from "../../interfaces";
 import { BytesLike } from "@ethersproject/bytes";
+import { ResponseMessage } from "../../utils/ResponseMessage";
+import { EVMException } from "../../utils/errors";
+import { Provider } from "@ethersproject/providers";
 
 export class ClientEstimationMethods extends ClientCore implements IClientEstimationMethods {
     constructor(context: Context) {
@@ -24,11 +29,11 @@ export class ClientEstimationMethods extends ClientCore implements IClientEstima
         Object.freeze(this);
     }
 
-    private getReceptionControllerWithSigner(): ReceptionController {
+    private getReceptionControllerWithSigner(): ReceptionControllerV2 {
         const signer = this.web3.getConnectedSigner();
         if (!signer) throw new NoSignerError();
 
-        return ReceptionController__factory.connect(this.web3.getReceptionControllerAddress(), signer);
+        return ReceptionControllerV2__factory.connect(this.web3.getReceptionControllerAddress(), signer);
     }
 
     private getExecutionControllerWithSigner(): ExecutionManager {
@@ -36,6 +41,49 @@ export class ClientEstimationMethods extends ClientCore implements IClientEstima
         if (!signer) throw new NoSignerError();
 
         return ExecutionManager__factory.connect(this.web3.getExecutionManagerAddress(), signer);
+    }
+
+    private getParamStorage(): ParamStorage {
+        const provider = this.web3.getProvider() as Provider;
+        if (!provider) throw new NoProviderError();
+
+        return ParamStorage__factory.connect(this.web3.getParamStorageAddress(), provider);
+    }
+
+    public async getFundProposalFee(): Promise<ParamValue> {
+        try {
+            const res = await this.getParamStorage().getFundProposalFee();
+            return {
+                value: res.value,
+                multiple: res.multiple,
+            };
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
+    }
+
+    public async getSystemProposalFee(): Promise<ParamValue> {
+        try {
+            const res = await this.getParamStorage().getSystemProposalFee();
+            return {
+                value: res.value,
+                multiple: res.multiple,
+            };
+        } catch (error) {
+            const message = ResponseMessage.getEVMErrorMessage(error);
+            throw new EVMException(message.code, message.error.message);
+        }
+    }
+
+    public async getProposalFee(proposalType: ProposalType, fundAmount: BigNumberish): Promise<BigNumber> {
+        if (proposalType === ProposalType.FUND) {
+            const param = await this.getFundProposalFee();
+            return BigNumber.from(fundAmount).mul(param.value).div(param.multiple);
+        } else {
+            const param = await this.getSystemProposalFee();
+            return param.value.div(param.multiple);
+        }
     }
 
     public async createProposal(
@@ -50,19 +98,23 @@ export class ClientEstimationMethods extends ClientCore implements IClientEstima
         systemType: SystemProposalType,
         params: SystemProposalParam[]
     ): Promise<GasFeeEstimation> {
+        const fee = await this.getProposalFee(proposalType, fundAmount);
         const contract = this.getReceptionControllerWithSigner();
-        const gasEstimation = await contract.estimateGas.createProposal({
-            proposalType,
-            title,
-            description,
-            proposalId,
-            fundAmount,
-            assessmentPeriod,
-            votePeriod,
-            documentId,
-            systemType,
-            params
-        });
+        const gasEstimation = await contract.estimateGas.createProposal(
+            {
+                proposalType,
+                title,
+                description,
+                proposalId,
+                fundAmount,
+                assessmentPeriod,
+                votePeriod,
+                documentId,
+                systemType,
+                params,
+            },
+            { value: fee }
+        );
         return this.web3.getApproximateGasFee(gasEstimation.toBigInt());
     }
 
@@ -99,11 +151,11 @@ export class ClientEstimationMethods extends ClientCore implements IClientEstima
         return this.web3.getApproximateGasFee(gasEstimation.toBigInt());
     }
 
-    private getVoteControllerWithSigner(): VoteController {
+    private getVoteControllerWithSigner(): VoteControllerV2 {
         const signer = this.web3.getConnectedSigner();
         if (!signer) throw new NoSignerError();
 
-        return VoteController__factory.connect(this.web3.getVoteControllerAddress(), signer);
+        return VoteControllerV2__factory.connect(this.web3.getVoteControllerAddress(), signer);
     }
 
     public async postBallot(proposalId: BytesLike, choice: Candidate): Promise<GasFeeEstimation> {

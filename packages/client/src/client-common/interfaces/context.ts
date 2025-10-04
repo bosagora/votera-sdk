@@ -10,11 +10,12 @@ type Web3ContextParams = {
     web3Providers?: string | JsonRpcProvider | (string | JsonRpcProvider)[];
     gasFeeEstimationFactor?: number;
 
+    IssuedContract: string;
     AddressStorage: string;
     BudgetManager: string;
     ParamStorage: string;
     ParticipantStorage: string;
-    EvaluatorStorage?: string;
+    EvaluatorStorage: string;
     ProposalStorage: string;
     AssessmentStorage: string;
     VoteStorage: string;
@@ -22,7 +23,7 @@ type Web3ContextParams = {
     AssessmentController: string;
     VoteController: string;
     ParticipantManager: string;
-    EvaluatorManager?: string;
+    EvaluatorManager: string;
     ExecutionManager: string;
 };
 
@@ -35,6 +36,7 @@ type Web3ContextState = {
     web3Providers: JsonRpcProvider[];
     gasFeeEstimationFactor: number;
 
+    IssuedContract?: string;
     AddressStorage?: string;
     BudgetManager?: string;
     ParamStorage?: string;

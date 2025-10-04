@@ -12,32 +12,53 @@ import {
     AssessmentResult,
     Candidate,
     VoteResult,
-    ExecutionStates, ContextParams
+    ExecutionStates,
+    ContextParams,
 } from "votera-sdk-client";
-import {Deployments, Helper} from "../helper/Deployments";
+import { Deployments, Helper } from "../helper/Deployments";
 
 import { expect } from "chai";
 
 async function main() {
-    const deployments= new Deployments("http://127.0.0.1:8545");
+    const deployments = new Deployments();
     await deployments.attachAll();
 
     const proposalData = {
         proposalType: ProposalType.FUND,
         proposer: "",
-        title: "proposal1",
+        title: "The proposal for Web3 Project",
         description: "This is a sample proposal.\nFor more information, please refer to the document",
         proposalId: ContractUtils.getRandomId(),
         fundAmount: Amount.make(1000000, 18).value,
-        assessmentPeriod: 10,
+        assessmentPeriod: 2,
         votePeriod: 10,
         documentId: ContractUtils.getRandomId(),
         systemType: SystemProposalType.NORMAL,
-        params: []
+        params: [],
     };
 
-    const ctx = new Context({...deployments.getContextParams(), signer: deployments.accounts.voters[0]});
+    console.log(deployments.accounts.voters[0].address);
+
+    const ctx = new Context({
+        ...deployments.getContextParams(),
+        signer: deployments.accounts.voters[0],
+    });
     const client = new Client(ctx);
+
+    const feeValue = await client.estimation.createProposal(
+        proposalData.proposalType,
+        proposalData.title,
+        proposalData.description,
+        proposalData.proposalId,
+        proposalData.fundAmount,
+        proposalData.assessmentPeriod,
+        proposalData.votePeriod,
+        proposalData.documentId,
+        proposalData.systemType,
+        proposalData.params
+    );
+
+    console.log(`feeValue - max: ${feeValue.max}, average: ${feeValue.average}`);
 
     for await (const step of client.methods.createProposal(
         proposalData.proposalType,
@@ -73,4 +94,3 @@ main().catch((error) => {
     console.error(error);
     process.exitCode = 1;
 });
-
